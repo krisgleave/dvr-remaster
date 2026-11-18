@@ -16,14 +16,14 @@ public static class UiText
     public const string HowBadLabel = "How bad is it?";
     public const string HowBadTip = "How damaged the recording is; each answer sets every repair at once. Fine-tune them under Advanced.";
     public const string LevelLight = "Light";
-    public const string LevelNormal = "Normal";
+    public const string LevelNormal = "Balanced";
     public const string LevelStrong = "Strong";
-    public const string LevelAnalogLight = "A little grain and colour noise, every detail kept.";
-    public const string LevelAnalogNormal = "Stripes and colour noise repaired, grain calmed.";
-    public const string LevelAnalogStrong = "Heavy colour noise and rainbow tears, calmed strongly.";
-    public const string LevelHdzeroLight = "Only the worst breakups rebuilt, every detail kept.";
-    public const string LevelHdzeroNormal = "Breakups rebuilt, the picture calmed.";
-    public const string LevelHdzeroStrong = "Frequent breakups and blocky noise.";
+    public const string LevelAnalogLight = "Light colour repair and noise reduction. Best for recordings with mostly clear reception.";
+    public const string LevelAnalogNormal = "Moderate colour repair and noise reduction. A starting point for typical interference.";
+    public const string LevelAnalogStrong = "Stronger colour repair and noise reduction. May soften fine detail or retain colour noise.";
+    public const string LevelHdzeroLight = "Light block repair, with no extra noise reduction.";
+    public const string LevelHdzeroNormal = "Moderate block repair and noise reduction.";
+    public const string LevelHdzeroStrong = "Stronger block repair and noise reduction. May soften fine detail.";
     public const string LevelNone = "Your own settings; pick an answer to start over from it.";
     public const string BestLabel = "Best quality";
     public const string BestDetail = "1080p, slower";
@@ -57,12 +57,12 @@ public static class UiText
     public const string PresetRowTip = "{0}: {1}";
 
     // ---- repair page
-    public const string CheckEyebrow = "CHECK THE RESULT";
+    public const string CheckEyebrow = "REFERENCE / RESTORED";
     public const string PreviewDefaultTitle = "Frame at the trim playhead";
     public const string RenderFrame = "Render this frame";
     public const string PreviewHint = "Render a frame to compare original and cleaned picture.";
-    public const string PreviewStatusIdle = "Renders a few frames around the playhead through every step. Drag the orange line to compare.";
-    public const string PreviewStatusDone = "Drag the orange line in the picture to compare original and result.";
+    public const string PreviewStatusIdle = "Renders a few frames around the playhead through every step. Drag the divider to compare.";
+    public const string PreviewStatusDone = "Drag the divider in the picture to compare original and result.";
     public const string LabelOriginal = "ORIGINAL";
     public const string LabelCleaned = "CLEANED";
     public const string LabelWithout = "WITHOUT";

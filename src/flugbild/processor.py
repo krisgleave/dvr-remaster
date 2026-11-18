@@ -85,6 +85,8 @@ def video_filters(recipe: Arbeitsrezept, *, preview: bool = False,
 
 def pixel_format(recipe: Arbeitsrezept) -> str:
     # ProRes 422 is 10-bit 4:2:2; everything else plays best as 8-bit 4:2:0.
+    if recipe.dateiformat == "mkv-ffv1":
+        return "bgr0"
     return "yuv422p10le" if recipe.dateiformat == "mov-prores" else "yuv420p"
 
 
@@ -126,8 +128,10 @@ def command(source: Path, target: Path, recipe: Arbeitsrezept, info: VideoKennda
     return args
 
 
-def encoding_options(recipe: Arbeitsrezept, info: VideoKenndaten, duration: float) -> list[str]:
+def _encoding_options(recipe: Arbeitsrezept, info: VideoKenndaten, duration: float) -> list[str]:
     form = recipe.dateiformat
+    if form == "mkv-ffv1":
+        return ["-c:v", "ffv1", "-level", "3", "-pix_fmt", "bgr0", "-c:a", "pcm_s16le"]
     if form == "mov-prores":
         # ProRes has a fixed data rate per profile: quality and size cap do not apply.
         return ["-c:v", "prores_ks", "-profile:v", "2", "-vendor", "apl0", "-pix_fmt", "yuv422p10le",
@@ -238,3 +242,8 @@ def process_one(source: Path, target: Path, recipe: Arbeitsrezept, info: VideoKe
         log.close()
         if workspace:
             workspace.cleanup()
+
+
+def encoding_options(recipe, info, duration):
+    options = _encoding_options(recipe, info, duration)
+    return options + (["-an"] if recipe.remove_audio else [])

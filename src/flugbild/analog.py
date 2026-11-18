@@ -18,7 +18,8 @@ The current luma is kept. Chroma is re-estimated from three earlier and three
 later frames aligned to the current one with optical flow, weighted by how
 well their luma matches and by the two fault scores, with a Cauchy reweighting
 against outliers. Where no aligned neighbour carries usable colour, the
-estimate fades to neutral grey instead of spreading a stripe.
+repair falls back to the current colour instead of deliberately fading to grey.
+This may retain interference where neither temporal nor spatial evidence is reliable.
 """
 
 from __future__ import annotations
@@ -129,7 +130,7 @@ def _luma_guided(chroma: np.ndarray, luma: np.ndarray, doubt: np.ndarray) -> np.
     Within a neighbourhood, one surface keeps its colour while its brightness
     varies, so colour is modelled as a linear function of luma there. The fit
     ignores doubtful pixels and then fills them. Without enough trusted pixels
-    nearby the prediction fades to neutral grey.
+    nearby the existing colour is retained rather than replaced with grey.
     """
     trust = (1 - doubt).astype(np.float32)
     window = (61, 25)
@@ -147,7 +148,7 @@ def _luma_guided(chroma: np.ndarray, luma: np.ndarray, doubt: np.ndarray) -> np.
         slope, offset = cv2.blur(slope, (31, 13)), cv2.blur(offset, (31, 13))
         predicted += unit * (slope * luma + offset)
     coverage = np.clip(cv2.blur(trust, window) / 0.3, 0, 1)
-    return predicted * coverage
+    return chroma + (predicted - chroma) * coverage
 
 
 def _follow_luma(chroma: np.ndarray, luma: np.ndarray, amount: float) -> np.ndarray:
@@ -209,9 +210,9 @@ def repair_window(aligner: _Aligner, window: list[_FrameData], center: int,
         cauchy = prior / (1 + np.square(np.abs(stack - estimate) / OUTLIER_SCALE))
         estimate = (stack * cauchy).sum(axis=0) / np.maximum(cauchy.sum(axis=0), 1e-3)
     backing = np.minimum(prior[1:].sum(axis=0), 1)
-    # Without usable neighbours the goal fades to neutral grey: a stripe is
-    # never copied into a frame that lacks trustworthy colour.
-    goal = estimate * backing
+    # Confidence controls how far we move towards the estimate, not its
+    # saturation. With no trusted donors, leave current colour in place.
+    goal = present.chroma + (estimate - present.chroma) * backing
     drained = 1 - present.colour * np.clip(np.abs(present.chroma) / np.maximum(
         0.6 * np.abs(estimate), 1.0), 0, 1)
     stray = np.clip((np.abs(present.chroma - estimate) - 8) / 12, 0, 1) * backing

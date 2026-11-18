@@ -52,6 +52,7 @@ GRAIN_SEED = 0x4C4F4F4B
 class Look:
     """Strengths of the five steps, each 0..1; all zero is no look at all."""
 
+    saturation: float = 1.0
     grade: float = 0.0
     glow: float = 0.0
     fringe: float = 0.0
@@ -60,15 +61,15 @@ class Look:
 
     @property
     def active(self) -> bool:
-        return any(value > 0 for value in (self.grade, self.glow, self.fringe, self.vignette, self.grain))
+        return self.saturation != 1.0 or any(value > 0 for value in (self.grade, self.glow, self.fringe, self.vignette, self.grain))
 
     @classmethod
     def of(cls, recipe: Arbeitsrezept) -> Look:
         """The look a recipe asks for; switched off it is the empty look."""
         if not recipe.look:
-            return cls()
-        return cls(float(recipe.look_farbstimmung), float(recipe.look_leuchten), float(recipe.look_farbsaum),
-                   float(recipe.look_vignette), float(recipe.look_koernung))
+            return cls(saturation=recipe.saturation)
+        return cls(saturation=recipe.saturation, grade=float(recipe.look_farbstimmung), glow=float(recipe.look_leuchten),
+                   fringe=float(recipe.look_farbsaum), vignette=float(recipe.look_vignette), grain=float(recipe.look_koernung))
 
 
 # The presets of the desktop app, for reference and tests.
@@ -166,6 +167,9 @@ def look_frame(frame: np.ndarray, look: Look, index: int = 0) -> np.ndarray:
     if not look.active:
         return frame
     picture = cv2.addWeighted(frame, 1 / 255, frame, 0, 0, dtype=cv2.CV_32F)
+    if look.saturation != 1.0:
+        luminance = np.sum(picture * LUMA, axis=2, keepdims=True)
+        picture = luminance + (picture - luminance) * look.saturation
     if look.grade > 0:
         picture = _grade(picture, look.grade)
     if look.glow > 0:

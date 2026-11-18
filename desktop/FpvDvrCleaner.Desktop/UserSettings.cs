@@ -18,6 +18,7 @@ public sealed class RepairPreset
     [JsonPropertyName("effort")] public string Effort { get; set; } = "balanced";
     [JsonPropertyName("quality")] public int Quality { get; set; } = 18;
     [JsonPropertyName("sizeCapMb")] public int SizeCapMb { get; set; }
+    [JsonPropertyName("saturation")] public int Saturation { get; set; } = 100;
     // The finishing look, strengths 0..100; presets saved before it existed load with the look off.
     [JsonPropertyName("look")] public bool Look { get; set; }
     [JsonPropertyName("lookGrade")] public int LookGrade { get; set; }
@@ -118,6 +119,9 @@ public sealed class ShareChoices
 /// </summary>
 public sealed class UserSettings
 {
+    [JsonPropertyName("outputHeight")] public int OutputHeight { get; set; } = 1080;
+    [JsonPropertyName("removeAudio")] public bool RemoveAudio { get; set; }
+    [JsonPropertyName("comparison")] public bool Comparison { get; set; }
     [JsonPropertyName("outputFolder")] public string? OutputFolder { get; set; }
     [JsonPropertyName("trainFolder")] public string? TrainFolder { get; set; }
     [JsonPropertyName("outputSuffix")] public string OutputSuffix { get; set; } = "-cleaned";

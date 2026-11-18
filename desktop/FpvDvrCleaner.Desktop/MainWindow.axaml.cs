@@ -84,11 +84,9 @@ public partial class MainWindow : Window
     /// <summary>Output formats of the Export page: engine name, file extension, label and one-line hint.</summary>
     private static readonly (string Id, string Extension, string Title, string Hint)[] Formats =
     [
-        ("mp4-h264", ".mp4", "MP4 · H.264", "Plays everywhere"),
-        ("mp4-hevc", ".mp4", "MP4 · H.265 / HEVC", "Smallest files · newer players"),
-        ("mov-prores", ".mov", "MOV · ProRes 422", "For video editors · very large"),
-        ("mkv-h264", ".mkv", "MKV · H.264", "Robust container · plays in VLC and most players"),
-        ("webm-vp9", ".webm", "WebM · VP9 + Opus", "For the web · slow to encode"),
+        ("mp4-h264", ".mp4", "MP4 / H.264", ""),
+        ("mp4-hevc", ".mp4", "MP4 / H.265", ""),
+        ("mov-prores", ".mov", "MOV / ProRes 422", ""),
     ];
     private static readonly string[] Titles = ["Import", "Trim", "Repair", "Export", "Model training"];
     private static readonly string[] Subtitles =
@@ -129,6 +127,7 @@ public partial class MainWindow : Window
         {
             RestoreSettings();
             SetUpRepairPage();
+            SetUpSimpleControls();
             RefreshModelChoices(); RefreshResumeChoices(); ShowPage(0); UpdateCompare();
             // Files passed on the command line ("Open with", dropped on the exe) join the queue.
             var given = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToList();
@@ -205,6 +204,12 @@ public partial class MainWindow : Window
         _settings.TrainFolder = TrainFolder.Text?.Trim();
         _settings.OutputSuffix = SuffixBox.Text?.Trim() ?? "";
         _settings.OutputFormat = OutputFormat.Id;
+        if (_simpleReady)
+        {
+            _settings.OutputHeight = OutputHeightChoice.SelectedIndex == 0 ? 720 : 1080;
+            _settings.Comparison = OutputLayoutChoice.SelectedIndex == 1;
+            _settings.RemoveAudio = RemoveAudio.IsChecked == true;
+        }
         _settings.JoinClips = JoinClips.IsChecked == true;
         _settings.OpenFolderAfterExport = OpenAfterExport.IsChecked == true;
         _settings.Snap = SnapToggle.IsChecked == true;
@@ -238,7 +243,7 @@ public partial class MainWindow : Window
                 {
                     new TextBlock { Text = format.Title, FontWeight = FontWeight.SemiBold },
                     new TextBlock { Text = format.Hint, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                        Foreground = new SolidColorBrush(Color.Parse("#5F676D")) },
+                        Foreground = new SolidColorBrush(Color.Parse("#B4B0AA")) },
                 },
             };
             FormatChoice.Items.Add(new ComboBoxItem { Content = line, Tag = format.Id });
@@ -260,6 +265,7 @@ public partial class MainWindow : Window
         if (_fillingFormats || FormatNote == null) return;
         ShowFormatNote();
         RememberSettings();
+        ShowSimpleExportSummary();
     }
 
     /// <summary>A purpose card picks the format; the full list stays under More options.</summary>
@@ -568,7 +574,7 @@ public partial class MainWindow : Window
         foreach (var clip in _queue)
         {
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(0, 1),
-                Background = new SolidColorBrush(Color.Parse(clip == _selected ? "#FFF0E6" : "#F6F6F3")) };
+                Background = new SolidColorBrush(Color.Parse(clip == _selected ? "#382D25" : "#2C2C2F")) };
             var choose = new Button
             {
                 Content = new StackPanel
@@ -576,9 +582,9 @@ public partial class MainWindow : Window
                     Children =
                     {
                         new TextBlock { Text = System.IO.Path.GetFileName(clip.Path), FontWeight = clip == _selected ? FontWeight.SemiBold : FontWeight.Normal,
-                            Foreground = new SolidColorBrush(Color.Parse("#20252B")) },
+                            Foreground = new SolidColorBrush(Color.Parse("#F2EEE8")) },
                         new TextBlock { Text = QueueSummary(clip),
-                            FontSize = 11, Foreground = new SolidColorBrush(Color.Parse("#5F676D")) },
+                            FontSize = 11, Foreground = new SolidColorBrush(Color.Parse("#B4B0AA")) },
                     },
                 },
             };
@@ -593,11 +599,11 @@ public partial class MainWindow : Window
                 ToolTip.SetTip(button, tip);
                 return button;
             }
-            var up = Square("M1,7 L5,3 L9,7", "#20252B", false, "Move up");
+            var up = Square("M1,7 L5,3 L9,7", "#F2EEE8", false, "Move up");
             up.IsEnabled = index > 0;
             up.Margin = new Thickness(6, 0, 0, 0);
             up.Click += (_, _) => { _queue.RemoveAt(index); _queue.Insert(index - 1, clip); DrawQueue(); };
-            var down = Square("M1,3 L5,7 L9,3", "#20252B", false, "Move down");
+            var down = Square("M1,3 L5,7 L9,3", "#F2EEE8", false, "Move down");
             down.IsEnabled = index < _queue.Count - 1;
             down.Margin = new Thickness(4, 0, 0, 0);
             down.Click += (_, _) => { _queue.RemoveAt(index); _queue.Insert(index + 1, clip); DrawQueue(); };
@@ -1392,6 +1398,7 @@ public partial class MainWindow : Window
     private RepairPreset CurrentRepair() => new()
     {
         Signal = IsAnalog ? "analog" : "digital",
+        Saturation = (int)(SaturationSlider?.Value ?? 100),
         Colour = (int)ColorSlider.Value, Noise = (int)NoiseSlider.Value, Block = (int)BlockSlider.Value,
         Detail = (int)DetailSlider.Value, Motion = (int)MotionSlider.Value, Size = SizePercent,
         Osd = RemoveOsd.IsChecked == true, Effort = Effort,
@@ -1410,14 +1417,15 @@ public partial class MainWindow : Window
             NoiseSlider.Value = Math.Clamp(preset.Noise, 0, 100);
             BlockSlider.Value = Math.Clamp(preset.Block, 0, 100);
             DetailSlider.Value = Math.Clamp(preset.Detail, 0, 100);
-            MotionSlider.Value = Math.Clamp(preset.Motion, 0, 100);
-            SizeOriginal.IsChecked = preset.Size == 100; Size150.IsChecked = preset.Size == 150; Size200.IsChecked = preset.Size == 200;
+            MotionSlider.Value = 0;
+            SaturationSlider.Value = Math.Clamp(preset.Saturation, 100, 125);
+            SizeOriginal.IsChecked = true; Size150.IsChecked = false; Size200.IsChecked = false;
             RemoveOsd.IsChecked = preset.Osd; OsdKeep.IsChecked = !preset.Osd;
-            EffortFast.IsChecked = preset.Effort == "fast"; EffortBest.IsChecked = preset.Effort == "best";
-            EffortBalanced.IsChecked = preset.Effort is not ("fast" or "best");
+            EffortFast.IsChecked = false; EffortBest.IsChecked = false;
+            EffortBalanced.IsChecked = true;
             QualityValue.Value = Math.Clamp(preset.Quality, 14, 32);
             SizeCap.Value = Math.Max(0, preset.SizeCapMb);
-            SetLook(preset.Look, (preset.LookGrade, preset.LookGlow, preset.LookVignette, preset.LookGrain, preset.LookFringe));
+            SetLook(false, (0, 0, 0, 0, 0));
         }
         finally { _applyingPreset = false; }
         Setting_Changed(null, new RoutedEventArgs());
@@ -1432,18 +1440,22 @@ public partial class MainWindow : Window
         farbberuhigung = Math.Clamp(settings.Colour, 0, 100),
         blockpflege = Math.Clamp(settings.Block, 0, 100),
         kantendetail = Math.Clamp(settings.Detail, 0, 100),
-        vergroesserung_prozent = settings.Size is 150 or 200 ? settings.Size : 100,
+        vergroesserung_prozent = 100,
+        output_height = OutputHeightChoice.SelectedIndex == 0 ? 720 : 1080,
+        comparison = OutputLayoutChoice.SelectedIndex == 1,
+        remove_audio = RemoveAudio.IsChecked == true,
+        saturation = Math.Clamp(settings.Saturation, 100, 125) / 100.0,
         bewegungsspur = Math.Clamp(settings.Motion, 0, 100),
         schnittbeginn = clip.In,
         schnittende = clip.Out,
-        untertiteltext = CaptionText.Text ?? "",
+        untertiteltext = "",
         kompressionswert = (int)(QualityValue.Value ?? 18),
-        dateiziel_mb = FormatUsesQuality ? (int)(SizeCap.Value ?? 0) : 0,
+        dateiziel_mb = 0,
         osd_entfernen = settings.Osd,
         rauschminderung = Math.Clamp(settings.Noise, 0, 100),
         aufwand = settings.Effort is "fast" or "best" ? settings.Effort : "balanced",
         dateiformat = OutputFormat.Id,
-        look = settings.Look,
+        look = false,
         look_farbstimmung = Math.Clamp(settings.LookGrade, 0, 100) / 100.0,
         look_leuchten = Math.Clamp(settings.LookGlow, 0, 100) / 100.0,
         look_farbsaum = Math.Clamp(settings.LookFringe, 0, 100) / 100.0,
@@ -1695,7 +1707,8 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { ExportStatus.Text = $"Could not create the folder: {ex.Message}"; return; }
         ShowOutputFolder();
         RememberSettings();
-        var join = JoinClips.IsChecked == true && clips.Count > 1;
+        var join = false;
+        SimpleExportResult.IsVisible = false;
         var usedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var targets = new List<string>();
         // The file extension follows the chosen format; the engine checks that they match.
@@ -1769,10 +1782,11 @@ public partial class MainWindow : Window
                 catch { _reviewOutInfo = (clip.Width, clip.Height, clip.Fps); }
                 ReviewTitle.Text = $"{clip} · original and cleaned result";
                 _reviewSeeking = true; ReviewSeek.Maximum = clip.Kept; ReviewSeek.Value = 0; _reviewSeeking = false;
-                ReviewPanel.IsVisible = true;
+                ReviewPanel.IsVisible = false;
+                SimpleExportResult.IsVisible = true;
+                SimpleOutputPath.Text = target;
                 Dispatcher.UIThread.Post(() => { _reviewSeeking = true; ReviewSeek.Value = 0; _reviewSeeking = false; });
-                await RefreshReviewAsync();
-                _ = AssessAsync(clip, target, quality, signal);
+
             }
             if (join)
             {

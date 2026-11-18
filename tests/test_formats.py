@@ -125,7 +125,7 @@ class EncoderSettingsTests(unittest.TestCase):
 @unittest.skipUnless(tools_available(), "FFmpeg is required")
 class FormatExportTests(unittest.TestCase):
     EXPECTED = {"mp4-h264": ("h264", "aac"), "mp4-hevc": ("hevc", "aac"), "mov-prores": ("prores", "pcm_s16le"),
-                "mkv-h264": ("h264", "aac"), "webm-vp9": ("vp9", "opus")}
+                "mkv-h264": ("h264", "aac"), "webm-vp9": ("vp9", "opus"), "mkv-ffv1": ("ffv1", "pcm_s16le")}
 
     @staticmethod
     def codecs(path: Path) -> tuple[str, str]:

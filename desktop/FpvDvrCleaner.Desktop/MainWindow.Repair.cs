@@ -172,6 +172,7 @@ public partial class MainWindow
             BestToggle.IsChecked = current.Size == 150 && current.Effort == "best";
         }
         finally { _syncingRepair = false; }
+        SyncSimpleRepair(level);
         LevelNote.Text = level?.Description ?? UiText.LevelNone;
         PresetState.Text = user != null ? string.Format(CultureInfo.CurrentCulture, UiText.StateUsing, user.Name)
             : level != null ? level.FullName

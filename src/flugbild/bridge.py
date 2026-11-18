@@ -23,6 +23,7 @@ from . import handmask
 from .restoration import PreviewWindow, clip_mask, picture_box, process_temporal
 from .segments import audio_outline, concat_files, export_segments, normalize_segments
 from .share import Teilauftrag, make_share
+from .delivery import deliver_cut
 from .assess import assess, sample_frames
 
 
@@ -218,6 +219,10 @@ def run(settings: dict) -> None:
                                       info.duration)
 
         def render(part_source, part_target, part_recipe, part_report):
+            if part_recipe.output_height:
+                return deliver_cut(part_source, part_target, part_recipe, info,
+                                   lambda src, dst, plan, report: render_cut(src, dst, plan, info, mode, profile, report),
+                                   part_report, threading.Event())
             return render_cut(part_source, part_target, part_recipe, info, mode, profile, part_report)
 
         result = export_segments(source, target, recipe, info, segments, render, report, threading.Event())

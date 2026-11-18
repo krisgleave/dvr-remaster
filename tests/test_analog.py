@@ -55,5 +55,35 @@ class AnalogRepairTest(unittest.TestCase):
         self.assertTrue(all(a is b for a, b in zip(repair_stream(clean, 0), clean)))
 
 
+class ColourRetentionTest(unittest.TestCase):
+    def test_coloured_frame_survives_monochrome_neighbours(self):
+        # A coloured frame surrounded by complete colour loss must not itself
+        # be desaturated merely because its neighbours have no chroma evidence.
+        frame = np.full((96, 160, 3), (80, 120, 165), np.uint8)
+        grey = cv2.cvtColor(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+        result = list(repair_stream([grey.copy() for _ in range(3)] + [frame] +
+                                    [grey.copy() for _ in range(3)], 50))[3]
+        before = np.abs(chroma(frame) - 128).mean()
+        after = np.abs(chroma(result) - 128).mean()
+        self.assertGreater(after, before * 0.95)
+
+    def test_single_frame_keeps_colour(self):
+        frame = np.full((96, 160, 3), (80, 120, 165), np.uint8)
+        result = list(repair_stream([frame], 50))[0]
+        self.assertLess(np.abs(result.astype(float) - frame).mean(), 2)
+
+    def test_spatial_repair_without_evidence_retains_colour(self):
+        from flugbild.analog import _luma_guided
+        colour = np.full((48, 80), 25 + 12j, np.complex64)
+        light = np.full(colour.shape, 120, np.float32)
+        result = _luma_guided(colour, light, np.ones(colour.shape, np.float32))
+        self.assertTrue(np.allclose(result, colour))
+
+    def test_monochrome_footage_does_not_gain_invented_colour(self):
+        frame = np.full((96, 160, 3), 120, np.uint8)
+        result = list(repair_stream([frame.copy() for _ in range(7)], 50))[3]
+        self.assertLess(np.abs(chroma(result) - 128).mean(), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

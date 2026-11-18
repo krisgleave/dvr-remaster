@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import json
+import math
 from pathlib import Path
 
 
 # Output file formats and the file extension each one is written with.
 DATEIFORMATE = {"mp4-h264": ".mp4", "mp4-hevc": ".mp4", "mov-prores": ".mov",
-                "mkv-h264": ".mkv", "webm-vp9": ".webm"}
+                "mkv-h264": ".mkv", "webm-vp9": ".webm", "mkv-ffv1": ".mkv"}
 # Strengths of the finishing look, each 0..1: colour grade, glow, lens fringe,
 # vignette and film grain. See look.py.
 LOOK_WERTE = ("look_farbstimmung", "look_leuchten", "look_farbsaum", "look_vignette", "look_koernung")
 # Fields that recipes saved by older versions lack; they load with their defaults.
-SPAETERE_FELDER = {"aufwand", "dateiformat", "look", *LOOK_WERTE, "osd_handmaske"}
+SPAETERE_FELDER = {"aufwand", "dateiformat", "look", *LOOK_WERTE, "osd_handmaske", "output_height", "comparison", "saturation", "remove_audio"}
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,20 @@ class Arbeitsrezept:
     # Hand corrections of the OSD mask from the mask editor: a PNG path, "" for none. See handmask.py.
     osd_handmaske: str = ""
 
+    output_height: int = 0
+    comparison: bool = False
+    remove_audio: bool = False
+    saturation: float = 1.0
+
     def validate(self) -> None:
+        if not isinstance(self.remove_audio, bool):
+            raise ValueError("remove_audio must be true or false")
+        if self.output_height not in {0, 720, 1080} or isinstance(self.output_height, bool):
+            raise ValueError("Output height must be 720 or 1080")
+        if not isinstance(self.comparison, bool) or (self.comparison and not self.output_height):
+            raise ValueError("Comparison requires an output height")
+        if not math.isfinite(self.saturation) or not 1.0 <= self.saturation <= 1.25:
+            raise ValueError("Saturation must be between 1.0 and 1.25")
         if self.signalart not in {"analog", "digital", "neutral"}:
             raise ValueError("Unknown signal profile")
         for name in ("farbberuhigung", "blockpflege", "kantendetail", "bewegungsspur", "rauschminderung"):
