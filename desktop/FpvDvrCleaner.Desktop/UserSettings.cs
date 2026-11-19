@@ -19,6 +19,10 @@ public sealed class RepairPreset
     [JsonPropertyName("quality")] public int Quality { get; set; } = 18;
     [JsonPropertyName("sizeCapMb")] public int SizeCapMb { get; set; }
     [JsonPropertyName("saturation")] public int Saturation { get; set; } = 100;
+    public int Brightness { get; set; } = 100;
+    public int Contrast { get; set; } = 100;
+    public int Gamma { get; set; } = 100;
+    public int Spatial { get; set; }
     // The finishing look, strengths 0..100; presets saved before it existed load with the look off.
     [JsonPropertyName("look")] public bool Look { get; set; }
     [JsonPropertyName("lookGrade")] public int LookGrade { get; set; }
@@ -50,7 +54,7 @@ public sealed class RepairPreset
         next = current.Clone();
         next.Name = "";
         next.Signal = Signal; next.Colour = Colour; next.Noise = Noise; next.Block = Block;
-        next.Detail = Detail; next.Motion = Motion;
+        next.Detail = Detail; next.Motion = Motion; next.Saturation = Saturation; next.Brightness = Brightness; next.Contrast = Contrast; next.Gamma = Gamma; next.Spatial = Spatial;
         return next;
     }
 
@@ -58,7 +62,7 @@ public sealed class RepairPreset
     public bool Matches(RepairPreset current)
     {
         var target = AppliedTo(current);
-        return target.Signal == current.Signal && target.Noise == current.Noise && target.Detail == current.Detail
+        return target.Saturation == current.Saturation && target.Brightness == current.Brightness && target.Contrast == current.Contrast && target.Gamma == current.Gamma && target.Spatial == current.Spatial && target.Signal == current.Signal && target.Noise == current.Noise && target.Detail == current.Detail
                && target.Motion == current.Motion && target.Size == current.Size && target.Effort == current.Effort
                && (current.Signal == "digital" || target.Colour == current.Colour)
                && (current.Signal != "digital" || target.Block == current.Block)
@@ -119,8 +123,8 @@ public sealed class ShareChoices
 /// </summary>
 public sealed class UserSettings
 {
-    [JsonPropertyName("outputHeight")] public int OutputHeight { get; set; } = 1080;
-    [JsonPropertyName("removeAudio")] public bool RemoveAudio { get; set; }
+    [JsonPropertyName("outputHeight")] public int OutputHeight { get; set; } = 0;
+    [JsonPropertyName("removeAudio")] public bool RemoveAudio { get; set; } = true;
     [JsonPropertyName("comparison")] public bool Comparison { get; set; }
     [JsonPropertyName("outputFolder")] public string? OutputFolder { get; set; }
     [JsonPropertyName("trainFolder")] public string? TrainFolder { get; set; }
@@ -146,7 +150,11 @@ public sealed class UserSettings
         // FPV_DVR_CLEANER_HOME points the settings and models somewhere else, e.g. a portable folder or a test profile.
         var custom = Environment.GetEnvironmentVariable("FPV_DVR_CLEANER_HOME");
         var folder = !string.IsNullOrWhiteSpace(custom) ? custom
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FPV DVR Cleaner");
+            : Path.Combine(
+                OperatingSystem.IsMacOS()
+                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support")
+                    : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "DVR Remaster");
         Directory.CreateDirectory(folder);
         return folder;
     }

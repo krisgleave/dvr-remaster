@@ -55,6 +55,21 @@ class OsdTest(unittest.TestCase):
         after = np.abs(cleaned[16].astype(int) - scene[16])[stats > 0].mean()
         self.assertLess(after, before * 0.45)
 
+    def test_protection_recovers_text_at_top_edge(self):
+        rng = np.random.default_rng(1)
+        frames = []
+        text = np.zeros((240, 320), np.uint8)
+        cv2.putText(text, "AIR", (12, 12), 0, .48, 255, 1)
+        for _ in range(24):
+            frame = cv2.resize(rng.integers(50, 190, (12, 16), dtype=np.uint8), (320, 240))
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            cv2.putText(frame, "AIR", (12, 12), 0, .48, (0, 0, 0), 4)
+            cv2.putText(frame, "AIR", (12, 12), 0, .48, (235, 235, 235), 1)
+            frames.append(frame)
+        mask, _ = find_osd(np.stack(frames), protect=True)
+        self.assertGreater((mask[text > 0] > 0).mean(), .95)
+        self.assertLess((mask > 0).mean(), .03)
+
     def test_too_few_samples_are_rejected(self):
         frames, _, _ = flight_with_osd(3)
         with self.assertRaises(ValueError):

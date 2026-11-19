@@ -92,24 +92,30 @@ def calibrate(folder: Path, signalart: str, seconds: int,
     while time.monotonic() < deadline and not stop.is_set():
         clip = footage[index % len(footage)]
         index += 1
-        stream = cv2.VideoCapture(str(clip))
-        if not stream.isOpened():
-            continue
-        touched.add(clip)
+        from .media import video_sampling_info, decode_frames
         try:
-            total = int(stream.get(cv2.CAP_PROP_FRAME_COUNT))
-            for position in range(0, max(total, 1), max(1, total // 40)):
-                if time.monotonic() >= deadline or stop.is_set():
-                    break
-                stream.set(cv2.CAP_PROP_POS_FRAMES, position)
-                ok, frame = stream.read()
-                if ok:
-                    chroma, seam = _measure(frame)
-                    chroma_scores.append(chroma)
-                    seam_scores.append(seam)
-                    announce(len(chroma_scores), seconds)
-        finally:
-            stream.release()
+            width, height, fps, total = video_sampling_info(clip)
+        except (ValueError, OSError, RuntimeError):
+            continue
+        except Exception:
+            continue
+
+        touched.add(clip)
+        for position in range(0, max(total, 1), max(1, total // 40)):
+            if time.monotonic() >= deadline or stop.is_set():
+                break
+            try:
+                frames = decode_frames(
+                    clip, position / fps, width, height,
+                    timeout=max(0.1, deadline - time.monotonic())
+                )
+            except Exception:
+                continue
+            if frames:
+                chroma, seam = _measure(frames[0])
+                chroma_scores.append(chroma)
+                seam_scores.append(seam)
+                announce(len(chroma_scores), seconds)
     if not chroma_scores:
         raise ValueError("Could not read frames from these videos")
     return Signalsignatur(1, signalart, len(chroma_scores),

@@ -18,6 +18,7 @@ from typing import Callable
 import numpy as np
 
 from .media import PROCESS_FLAGS, VideoKenndaten, inspect_video
+from .processor import publish_output
 from .processor import Laufergebnis, diagnostic_tail, temporary_output
 from .recipe import Arbeitsrezept
 
@@ -83,7 +84,7 @@ def concat_files(parts: list[Path], target: Path) -> Laufergebnis:
         if proc.returncode:
             pending.unlink(missing_ok=True)
             return Laufergebnis(parts[0], target, False, diagnostic_tail(log) or "Could not join the parts")
-        pending.replace(target)
+        publish_output(pending, target)
         return Laufergebnis(parts[0], target, True, "Done")
     finally:
         log.close()

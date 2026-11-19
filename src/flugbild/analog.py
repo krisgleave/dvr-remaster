@@ -179,10 +179,12 @@ def repair_window(aligner: _Aligner, window: list[_FrameData], center: int,
     """
     present = window[center]
     aligned = []
+    light_donors = []
     for index, other in enumerate(window):
         if index == center:
             continue
         luma, chroma, tears, colour = aligner.warp(present, other)
+        light_donors.append(luma)
         moved_fit = np.exp(-np.square((luma - present.luma) / LUMA_MATCH))
         # Static screen content (OSD, a still scene) matches best without motion.
         still_fit = np.exp(-np.square((other.luma - present.luma) / LUMA_MATCH))
@@ -238,6 +240,23 @@ def repair_window(aligner: _Aligner, window: list[_FrameData], center: int,
                         (width, height), interpolation=cv2.INTER_LINEAR)
     result = present.ycc.astype(np.float32)
     result[:, :, 1:] += planes
+    # Short horizontal luminance flashes: require agreement from both sides
+    # of the frame in time and broad horizontal support, not isolated edges.
+    if center > 0 and center < len(window) - 1 and len(light_donors) >= 2:
+        previous = np.median(light_donors[:center], axis=0)
+        following = np.median(light_donors[center:], axis=0)
+        donor = (previous + following) * 0.5
+        delta = present.luma - donor
+        agreed = np.abs(previous - following) < 20
+        threshold = 65 - 30 * amount / 100
+        candidate = agreed & (delta > threshold) & (present.luma > 155)
+        rows = candidate.mean(axis=1)
+        broad = np.clip((rows - 0.55) / 0.25, 0, 1)[:, None]
+        # Avoid replacing a legitimate full-frame exposure transition.
+        if np.mean(rows > 0.55) < 0.45:
+            correction = -delta * candidate * broad * (1 - overlay) * amount / 100
+            result[:, :, 0] += cv2.resize(correction.astype(np.float32), (width, height), interpolation=cv2.INTER_LINEAR)
+
     return cv2.cvtColor(np.clip(result, 0, 255).astype(np.uint8), cv2.COLOR_YCrCb2BGR)
 
 

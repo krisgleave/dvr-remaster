@@ -169,7 +169,7 @@ def _orientation(step_x: np.ndarray, step_y: np.ndarray) -> np.ndarray:
     return (np.degrees(np.arctan2(step_y, step_x)).astype(np.int16) % 180 + 1).astype(np.uint8)
 
 
-def find_osd(frames: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def find_osd(frames: np.ndarray, *, protect: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """Mask (0/255) of overlay graphics from BGR probes of one clip, and its guide.
 
     The guide holds, inside the mask, the orientation of every edge that held
@@ -187,6 +187,47 @@ def find_osd(frames: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         picture |= _picture_area(frame)
     edges = coherence.still_edges(0.7, 80.0)
     mask = _overlay_shapes(edges, picture)
+    if protect:
+        # Protection can tolerate a slightly wider mask than destructive removal.
+        # Fill dark glyph interiors in the active-picture map and keep the top
+        # and bottom rows: black outlines otherwise disappear during erosion.
+        area = cv2.morphologyEx(picture, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
+        relaxed = coherence.still_edges(0.58, 50.0)
+        # Require evidence in separated portions of the clip, not merely a
+        # strong edge in a handful of adjacent probes (e.g. a passing tree).
+        votes = np.zeros_like(relaxed)
+        for group in np.array_split(frames, 4):
+            part = _Coherence(frames.shape[1:3])
+            for gradients in ordered_map(_Coherence.gradients, group):
+                part.add(gradients)
+            votes += cv2.dilate(part.still_edges(.55, 50.0), np.ones((3, 3), np.uint8))
+        stable = (votes >= 3).astype(np.uint8)
+        relaxed &= stable
+        gray = cv2.cvtColor(frames[len(frames) // 2], cv2.COLOR_BGR2GRAY)
+        contrast = cv2.dilate(gray, np.ones((7, 7), np.uint8)).astype(np.int16) - cv2.erode(gray, np.ones((7, 7), np.uint8))
+        relaxed &= (contrast > 45).astype(np.uint8)
+        extra = _overlay_shapes(relaxed, area)
+        # The normal shape detector erodes the picture and drops border runs.
+        # Recover short coherent strokes adjacent to the upper/lower boundary.
+        rim = np.zeros_like(relaxed)
+        band = max(12, int(picture.shape[0] * .12))
+        rim[:band] = relaxed[:band]
+        rim[-band:] = relaxed[-band:]
+        for kernel in (np.ones((1, max(12, picture.shape[1] // 5)), np.uint8),
+                       np.ones((max(12, picture.shape[0] // 6), 1), np.uint8)):
+            rim &= 1 - cv2.morphologyEx(rim, cv2.MORPH_OPEN, kernel)
+        rim = cv2.dilate(rim, np.ones((5, 5), np.uint8))
+        count, labels, stats, _ = cv2.connectedComponentsWithStats(rim)
+        for i in range(1, count):
+            x, y, w, h, size = stats[i]
+            if size >= 12 and h <= band and w < picture.shape[1] * .6:
+                extra[labels == i] = 255
+        mask |= extra
+        # Bound protection to neighbourhoods with repeated overlay evidence.
+        # Retain nearby changing digits and dark outlines, not whole scenery blobs.
+        support = cv2.dilate(stable & (relaxed | edges),
+                             np.ones((max(5, picture.shape[0] // 45), max(7, picture.shape[1] // 32)), np.uint8))
+        mask &= support * 255
     # The colour channel with the strongest steady edge sets the direction.
     strongest = cv2.magnitude(coherence.vector_x, coherence.vector_y).argmax(axis=2)[:, :, None]
     step_x = np.take_along_axis(coherence.vector_x, strongest, axis=2)[:, :, 0]
@@ -196,8 +237,8 @@ def find_osd(frames: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def detect_osd(source: Path, start: float, duration: float,
-               width: int, height: int) -> tuple[np.ndarray, np.ndarray]:
-    return find_osd(_probe_frames(source, start, duration, width, height))
+               width: int, height: int, *, protect: bool = False) -> tuple[np.ndarray, np.ndarray]:
+    return find_osd(_probe_frames(source, start, duration, width, height), protect=protect)
 
 
 def _shown_share(frame: np.ndarray, guide: np.ndarray, labels: np.ndarray, elements: int) -> np.ndarray:

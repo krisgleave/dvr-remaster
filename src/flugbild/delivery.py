@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 
 from .media import PROCESS_FLAGS, inspect_video
+from .processor import publish_output
 from .processor import (Laufergebnis, diagnostic_tail, encoding_options, find_asset,
                         output_duration, temporary_output)
 
@@ -29,7 +30,7 @@ def display_aspect(source, info):
             return float(ratio)
     except (ValueError, ZeroDivisionError, IndexError):
         pass
-    return info.width / info.height
+    return info.width * info.sar / info.height
 
 
 def delivery_size(aspect, height, comparison=False):
@@ -104,7 +105,7 @@ def deliver_cut(source, target, recipe, info, render, progress, cancel):
                 return Laufergebnis(source, target, False, 'Canceled')
             if proc.returncode:
                 return Laufergebnis(source, target, False, diagnostic_tail(log) or 'Export encoding failed')
-            pending.replace(target)
+            publish_output(pending, target)
             progress(1.)
             return Laufergebnis(source, target, True, 'Done')
         finally:

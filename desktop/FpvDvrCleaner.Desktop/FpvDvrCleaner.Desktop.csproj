@@ -6,8 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
-    <Version>0.7.2</Version>
-    <Product>FPV DVR Cleaner</Product>
+    <Version>1.0.0</Version>
+    <Product>DVR Remaster</Product>
   </PropertyGroup>
 
   <!-- Linux packages ship one executable instead of hundreds of managed .dll files

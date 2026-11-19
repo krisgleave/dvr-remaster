@@ -1,0 +1,13 @@
+altgraph==0.17.5
+iniconfig==2.3.1
+macholib==1.16.4
+numpy==2.5.4
+opencv_python_headless @ file:///Users/gleavek/dvr-remaster-media/wheels/opencv_python_headless-5.0.0.93-cp312-cp312-macosx_14_0_arm64.whl#sha256=ada4368f8b3bfe2ef151873abcd7607410373554c0bb85fc8205f9de4545d69b
+packaging==26.3
+pillow==13.0.0
+pluggy==1.7.0
+Pygments==2.21.0
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.10
+pytest==9.2.0
+setuptools==84.2.1

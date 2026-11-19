@@ -1,63 +1,68 @@
 # Third-party notices
 
-The application source in this repository is MIT licensed (see [LICENSE](LICENSE)).
-It contains no source code, models, images or other assets taken from other
-projects. It *uses* the open-source components below. Their own licences apply
-to them; the MIT licence of this project does not replace them.
+DVR Remaster is distributed under GPL-3.0-or-later.
+The original FPV DVR Cleaner copyright and MIT licence
+are preserved in licenses/FPV-DVR-Cleaner-MIT.txt.
 
-## Desktop application (.NET 8 / Avalonia)
+Third-party components retain their own licences.
 
-Shipped inside a published desktop build.
+## Desktop application
 
-| Component | Version | Licence | Project |
-|---|---|---|---|
-| Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent, Avalonia.Skia, Avalonia.Win32, Avalonia.X11, Avalonia.Native, Avalonia.FreeDesktop, Avalonia.HarfBuzz, Avalonia.Remote.Protocol | 12.1.4 | MIT | https://github.com/AvaloniaUI/Avalonia |
-| Avalonia.Fonts.Inter (packages the Inter typeface) | 12.1.4 | MIT (package), SIL OFL 1.1 (font) | https://github.com/AvaloniaUI/Avalonia, https://github.com/rsms/inter |
-| Avalonia.Angle.Windows.Natives (ANGLE) | 2.1 | BSD-3-Clause | https://chromium.googlesource.com/angle/angle |
-| SkiaSharp (with native Skia) | 3.119 | MIT (SkiaSharp), BSD-3-Clause (Skia) | https://github.com/mono/SkiaSharp |
-| HarfBuzzSharp (with native HarfBuzz) | 8.3 | MIT (HarfBuzzSharp), "Old MIT" (HarfBuzz) | https://github.com/mono/SkiaSharp, https://github.com/harfbuzz/harfbuzz |
-| MicroCom.Runtime | 0.11 | MIT | https://github.com/kekekeks/MicroCom |
-| Tmds.DBus.Protocol | 0.94 | MIT | https://github.com/tmds/Tmds.DBus |
-| Microsoft.Extensions.*, System.IO.Pipelines, Microsoft.IO.RecyclableMemoryStream | 8.0 / 3.0 | MIT | https://github.com/dotnet/runtime, https://github.com/microsoft/Microsoft.IO.RecyclableMemoryStream |
-| .NET runtime (self-contained builds only) | 8.0 | MIT | https://github.com/dotnet/runtime |
-
-Development only, not shipped in Release builds:
-
-| Component | Licence | Note |
+| Component | Version | Licence |
 |---|---|---|
-| AvaloniaUI.DiagnosticsSupport | see https://avaloniaui.net | Referenced for Debug builds only (`PrivateAssets` in Release). |
-| Avalonia.BuildServices | MIT | Build-time package pulled in by Avalonia. |
+| Avalonia | 12.1.4 | MIT |
+| Inter typeface | | SIL OFL 1.1 |
+| SkiaSharp | 3.119.4 | MIT; native third-party notices |
+| HarfBuzzSharp | 8.3.1.3 | MIT; native third-party notices |
+| MicroCom.Runtime | 0.11.6 | MIT |
+| Tmds.DBus.Protocol | 0.94.1 | MIT |
+| Microsoft.IO.RecyclableMemoryStream | 3.0.1 | MIT |
+| Microsoft .NET runtime | 8.0.33 | MIT; third-party notices |
+| Microsoft.Extensions and System.IO.Pipelines | 8.0 series | MIT |
 
-## Video engine (Python)
+## Video restoration engine
 
-Not part of this repository. When running from source, the user installs it
-with `pip`. The ready-to-run packages contain it as a frozen program in the
-`engine` folder (built with PyInstaller, GPL-2.0 with bootloader exception).
-
-| Component | Licence | Project |
+| Component | Version | Licence |
 |---|---|---|
-| Python | PSF License | https://www.python.org |
-| NumPy | BSD-3-Clause | https://numpy.org |
-| OpenCV (opencv-python-headless) | Apache-2.0 (OpenCV), MIT (packaging); the wheels bundle further libraries such as FFmpeg under LGPL-2.1 whose licence files ship inside the wheel | https://github.com/opencv/opencv-python |
-| Inter typeface (`src/flugbild/assets/Inter.ttf`, used for burned-in captions) | SIL OFL 1.1, see [INTER-OFL.txt](src/flugbild/assets/INTER-OFL.txt) | https://github.com/rsms/inter |
+| CPython | 3.12.16 | PSF and bundled component licences |
+| OpenSSL | 3.5.9 | Apache-2.0 |
+| NumPy | 2.5.4 | BSD-3-Clause and bundled component licences |
+| Pillow | 13.0.0 | MIT-CMU and bundled component licences |
+| OpenCV | 5.0.0 | Apache-2.0 and bundled component licences |
+| OpenCV Python packaging | 5.0.0.93 | MIT |
+| PyInstaller | 6.22.3 | GPL with bootloader exception |
+| Inter typeface | | SIL OFL 1.1 |
 
-## External tools
+The custom OpenCV build disables FFmpeg integration and
+uses macOS AVFoundation support. Video decoding and
+encoding are primarily handled by separate FFmpeg tools.
 
-| Component | Licence | Note |
-|---|---|---|
-| FFmpeg / ffprobe (with x264) | GPL-2.0-or-later (the bundled builds include libx264) | Called as a separate program. Not part of this repository. The ready-to-run packages ship the unmodified static builds from https://github.com/BtbN/FFmpeg-Builds (Windows, Linux) and https://ffmpeg.martin-riedl.de (macOS) in the `ffmpeg` folder, with their licence in `ffmpeg/FFMPEG-LICENSE.txt`. Source code: https://ffmpeg.org/download.html and the build projects above. https://ffmpeg.org/legal.html |
+## External FFmpeg tools
 
-## Legacy prototype
+FFmpeg and ffprobe version 9.0.2 are custom-built for
+Apple Silicon, with GPL and version3 enabled.
 
-The older Qt prototype (`src/flugbild/window.py`, `cutroom.py`) uses PySide6
-(LGPL-3.0 / GPL) and was packaged with PyInstaller (GPL-2.0 with bootloader
-exception). Neither is needed by the .NET desktop app.
+The statically linked libraries include x264, x265,
+FreeType, HarfBuzz, libvpx, Opus and zlib.
 
-## Distributing binaries
+The resulting FFmpeg executables are GPL-3.0-or-later.
+They are invoked as separate programs.
 
-A published desktop build contains the .NET components listed above. Include
-this file and the licence texts of those packages (NuGet ships them in each
-package) with any binary release. The ready-to-run packages also bundle the
-frozen engine (Python, NumPy, OpenCV) and FFmpeg; the licence files of the
-bundled wheels ship inside the `engine` folder, and FFmpeg's in the `ffmpeg`
-folder.
+## Licence texts and corresponding source
+
+Full collected licence texts and notices are supplied
+with the application in its Third-Party-Licences directory.
+
+The accompanying version-matched third-party source
+archive supplies source materials, provenance and build
+configuration information.
+
+Release repository:
+https://github.com/krisgleave/dvr-remaster
+
+FFmpeg licensing information:
+https://ffmpeg.org/legal.html
+
+Development-only packages and legacy prototype
+dependencies are not necessarily included in the
+distributed macOS application.

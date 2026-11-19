@@ -1,0 +1,3 @@
+Repository: https://github.com/AvaloniaUI/Avalonia
+Revision: 2d79ba55fae1b1e71c69f93a668080c9029e6a31
+Licence path: licence.md

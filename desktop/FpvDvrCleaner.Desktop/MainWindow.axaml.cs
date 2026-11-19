@@ -22,6 +22,15 @@ public partial class MainWindow : Window
         public int Width { get; } = width;
         public int Height { get; } = height;
         public double Fps { get; } = fps;
+        public RepairPreset? QueuedRepair { get; set; }
+        public bool? QueuedPreserveOsd { get; set; }
+        public Guid QueueId { get; set; }
+        public double Sar { get; set; } = 1;
+        public string Codec { get; set; } = "";
+        public string AudioCodec { get; set; } = "";
+        public long Bitrate { get; set; }
+        public long Size { get; set; }
+
         /// <summary>Hand corrections of the OSD mask for this recording (a PNG in the settings folder), or null.</summary>
         public string? ManualMask { get; set; }
         /// <summary>The picture inside black side bars; null until measured or when there are none.</summary>
@@ -44,14 +53,17 @@ public partial class MainWindow : Window
 
         public FootageItem Copy()
         {
-            var copy = new FootageItem(Path, Duration, HasAudio, Width, Height, Fps) { Box = Box, BoxRequested = BoxRequested, BoxMeasured = BoxMeasured, Segments = Segments.ToList(), Bookmarks = Bookmarks.ToList(),
-                Waveform = Waveform, WaveformRequested = WaveformRequested, StripRequested = StripRequested, ManualMask = ManualMask };
+            var copy = new FootageItem(Path, Duration, HasAudio, Width, Height, Fps) { Sar = Sar, Codec = Codec, AudioCodec = AudioCodec, Bitrate = Bitrate, Size = Size, Box = Box, BoxRequested = BoxRequested, BoxMeasured = BoxMeasured, Segments = Segments.ToList(), Bookmarks = Bookmarks.ToList(),
+                QueuedRepair = QueuedRepair?.Clone(), QueuedPreserveOsd = QueuedPreserveOsd, QueueId = QueueId, Waveform = Waveform, WaveformRequested = WaveformRequested, StripRequested = StripRequested, ManualMask = ManualMask };
             copy.Strip.AddRange(Strip);
             return copy;
         }
     }
 
-    private readonly List<FootageItem> _queue = [];
+    private readonly List<FootageItem> _queue = []; // imported recordings
+    private readonly List<FootageItem> _exportQueue = [];
+    private List<FootageItem> ExportClips() => _exportQueue.Count > 0 ? _exportQueue.ToList() : _selected is { } clip ? [clip] : [];
+
     private readonly UserSettings _settings = UserSettings.Load();
     private FootageItem? _selected;
     private int _page;
@@ -101,15 +113,19 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AddHandler(KeyDownEvent, PlaybackShortcut, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(KeyUpEvent, PlaybackShortcutReleased, RoutingStrategies.Tunnel, handledEventsToo: true);
         _frameDelay.Tick += async (_, _) => { _frameDelay.Stop(); await RefreshFrameAsync(); };
         _player.FrameShown += OnPlaybackFrame;
+        _player.PairShown += OnWorkspacePair;
+        _player.Failed += message => { _playing = false; UpdatePlayIcon(false); PreviewStatus.Text = "Preview failed: " + message; CompareAfter.Source = null; CompareDivider.IsVisible = false; UpdateCompare(); };
         _player.Ended += () => { if (_playing) ContinueOrStop(); };
         _reviewPair.PairShown += OnReviewPair;
         _reviewPair.Ended += () => StopReviewPlayback();
         _exportClock.Tick += (_, _) => ShowExportTime();
         HookTimeline();
-        DragDrop.AddDragOverHandler(DropZone, (_, e) => e.DragEffects = DragDropEffects.Copy);
-        DragDrop.AddDropHandler(DropZone, async (_, e) =>
+        DragDrop.AddDragOverHandler(TopImport, (_, e) => e.DragEffects = DragDropEffects.Copy);
+        DragDrop.AddDropHandler(TopImport, async (_, e) =>
         {
             var files = e.DataTransfer.TryGetFiles();
             if (files == null) return;
@@ -133,7 +149,8 @@ public partial class MainWindow : Window
             var given = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToList();
             if (given.Count > 0) await AddFilesAsync(given);
         };
-        Closing += (_, _) => { _previewCancel?.Cancel(); _player.Dispose(); _reviewPair.Dispose(); RememberSettings(); };
+        Deactivated += (_, _) => _spaceHeld = false;
+        Closing += (_, _) => { _previewCancel?.Cancel(); _player.Dispose(); DeleteLiveTicket(); _reviewPair.Dispose(); RememberSettings(); };
     }
 
     // ---------------------------------------------------------------- busy overlay
@@ -188,7 +205,7 @@ public partial class MainWindow : Window
         FillFormatChoices(_settings.OutputFormat);
         JoinClips.IsChecked = _settings.JoinClips;
         OpenAfterExport.IsChecked = _settings.OpenFolderAfterExport;
-        SnapToggle.IsChecked = _settings.Snap;
+        SnapToggle.IsChecked = false;
         Timeline.Snap = _settings.Snap;
         if (_settings.LastRepair != null) ApplyRepair(_settings.LastRepair);
         else ShowLook();
@@ -206,7 +223,7 @@ public partial class MainWindow : Window
         _settings.OutputFormat = OutputFormat.Id;
         if (_simpleReady)
         {
-            _settings.OutputHeight = OutputHeightChoice.SelectedIndex == 0 ? 720 : 1080;
+            _settings.OutputHeight = SelectedOutputHeight;
             _settings.Comparison = OutputLayoutChoice.SelectedIndex == 1;
             _settings.RemoveAudio = RemoveAudio.IsChecked == true;
         }
@@ -236,17 +253,7 @@ public partial class MainWindow : Window
         FormatChoice.Items.Clear();
         foreach (var format in Formats)
         {
-            var line = new StackPanel
-            {
-                Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8,
-                Children =
-                {
-                    new TextBlock { Text = format.Title, FontWeight = FontWeight.SemiBold },
-                    new TextBlock { Text = format.Hint, FontSize = 12, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                        Foreground = new SolidColorBrush(Color.Parse("#B4B0AA")) },
-                },
-            };
-            FormatChoice.Items.Add(new ComboBoxItem { Content = line, Tag = format.Id });
+            FormatChoice.Items.Add(new ComboBoxItem { Content = format.Title, Tag = format.Id, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left });
         }
         // An unknown or missing name (older settings) falls back to MP4 · H.264.
         FormatChoice.SelectedIndex = Math.Max(0, Array.FindIndex(Formats, format => format.Id == chosen));
@@ -455,16 +462,22 @@ public partial class MainWindow : Window
 
     private void ShowPage(int index)
     {
+        if (index <= 3) index = 1;
         if (index != 1) StopPlay();
         if (index != 3) StopReviewPlayback();
         _page = index;
+        Focus();
         var pages = new Control[] { ImportPage, TrimPage, CleanPage, ExportPage, TrainPage };
         var steps = new[] { ImportStep, TrimStep, CleanStep, ExportStep, TrainStep };
-        for (var i = 0; i < pages.Length; i++) { pages[i].IsVisible = i == index; steps[i].Classes.Set("current", i == index); }
-        PageTitle.Text = Titles[index];
-        PageSubtitle.Text = Subtitles[index];
-        BackButton.IsVisible = index is > 0 and < 4;
-        NextButton.IsVisible = index < 3;
+        for (var i = 0; i < pages.Length; i++) { pages[i].IsVisible = i == index; steps[i].Classes.Set("current", i == (index == 1 ? 0 : index)); }
+        Workspace.IsVisible = index == 1;
+        ExportPage.IsVisible = index == 1;
+        ImportPage.IsVisible = index == 1;
+        TrimPage.IsVisible = index == 1;
+        PageTitle.Text = index == 1 ? "Workspace" : Titles[index];
+        PageSubtitle.Text = index == 1 ? "Import, trim and restore your recordings." : Subtitles[index];
+        BackButton.IsVisible = index == 3;
+        NextButton.IsVisible = false;
         NextButton.Content = index switch { 0 => "Next: Trim →", 1 => "Next: Repair →", _ => "Next: Export →" };
         FooterNote.Text = index switch
         {
@@ -478,9 +491,9 @@ public partial class MainWindow : Window
             ? Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
         FitTrimPage();
         if (index == 1 && _selected != null) { LayoutStrip(); RequestFrame(); }
-        if (index == 2) { ShowPresetState(); RequestAutoRender(); }
+        if (index == 1) { ShowPresetState(); RequestAutoRender(); }
         else { _autoRender.Stop(); _previewCancel?.Cancel(); }
-        if (index == 3) { ShowOutputFolder(); UpdateExportSummary(); }
+        if (index == 1) { ShowOutputFolder(); UpdateExportSummary(); ShowSimpleExportSummary(); }
         PageScroller.Offset = new Vector(0, 0);
     }
     private void ImportStep_Click(object? sender, RoutedEventArgs e) => ShowPage(0);
@@ -505,8 +518,8 @@ public partial class MainWindow : Window
     {
         var options = new FolderPickerOpenOptions { AllowMultiple = false };
         if (Directory.Exists(startIn))
-            options.SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(startIn);
-        var folders = await StorageProvider.OpenFolderPickerAsync(options);
+            options.SuggestedStartLocation = await (_exportDialog?.StorageProvider ?? StorageProvider).TryGetFolderFromPathAsync(startIn);
+        var folders = await (_exportDialog?.StorageProvider ?? StorageProvider).OpenFolderPickerAsync(options);
         return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
     }
 
@@ -541,13 +554,13 @@ public partial class MainWindow : Window
                     info.TryGetProperty("audio", out var audio) && audio.GetBoolean(),
                     info.GetProperty("width").GetInt32(), info.GetProperty("height").GetInt32(),
                     info.TryGetProperty("fps", out var fps) ? fps.GetDouble() : 0);
+                if (info.TryGetProperty("sar", out var sar)) clip.Sar = sar.GetDouble();
+                if (info.TryGetProperty("codec", out var codec)) clip.Codec = codec.GetString() ?? "";
+                if (info.TryGetProperty("audio_codec", out var ac)) clip.AudioCodec = ac.GetString() ?? "";
+                if (info.TryGetProperty("bitrate", out var br)) clip.Bitrate = br.GetInt64();
+                if (info.TryGetProperty("size", out var size)) clip.Size = size.GetInt64();
                 if (_settings.RememberedCut(path) is { } memory)
                 {
-                    var segments = memory.Segments.Where(s => s.Length == 2 && s[1] - s[0] >= 0.1)
-                        .Select(s => (Math.Clamp(s[0], 0, clip.Duration), Math.Clamp(s[1], 0, clip.Duration)))
-                        .Where(s => s.Item2 - s.Item1 >= 0.1).OrderBy(s => s.Item1).ToList();
-                    if (segments.Count > 0) clip.Segments = segments;
-                    clip.Bookmarks = memory.Bookmarks.Where(b => b >= 0 && b <= clip.Duration).ToList();
                     clip.ManualMask = UserSettings.RememberedMask(memory);
                 }
                 _queue.Add(clip);
@@ -562,7 +575,7 @@ public partial class MainWindow : Window
         DrawQueue();
         ShowOutputFolder();
         if (_selected == null && _queue.Count > 0) Select(_queue[0]);
-        if (_page == 0) ShowPage(0);
+        if (_page == 1) FitTrimPage();
     }
 
     private void DrawQueue()
@@ -573,8 +586,8 @@ public partial class MainWindow : Window
         ImportHint.Text = _queue.Count == 0 ? "Add recordings" : CountLabel.Text;
         foreach (var clip in _queue)
         {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(0, 1),
-                Background = new SolidColorBrush(Color.Parse(clip == _selected ? "#382D25" : "#2C2C2F")) };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 1),
+                Background = new SolidColorBrush(Color.Parse(clip == _selected ? "#253B50" : "#2C2C2F")) };
             var choose = new Button
             {
                 Content = new StackPanel
@@ -582,9 +595,9 @@ public partial class MainWindow : Window
                     Children =
                     {
                         new TextBlock { Text = System.IO.Path.GetFileName(clip.Path), FontWeight = clip == _selected ? FontWeight.SemiBold : FontWeight.Normal,
-                            Foreground = new SolidColorBrush(Color.Parse("#F2EEE8")) },
+                            Foreground = new SolidColorBrush(Color.Parse("#F2EEE8")), TextTrimming = TextTrimming.CharacterEllipsis },
                         new TextBlock { Text = QueueSummary(clip),
-                            FontSize = 11, Foreground = new SolidColorBrush(Color.Parse("#B4B0AA")) },
+                            FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.Parse("#B4B0AA")) },
                     },
                 },
             };
@@ -622,13 +635,129 @@ public partial class MainWindow : Window
                 DrawQueue();
             };
             Grid.SetColumn(up, 1); Grid.SetColumn(down, 2); Grid.SetColumn(copy, 3); Grid.SetColumn(trim, 4); Grid.SetColumn(remove, 5);
-            row.Children.Add(choose); row.Children.Add(up); row.Children.Add(down); row.Children.Add(copy); row.Children.Add(trim); row.Children.Add(remove);
+            row.Children.Add(choose); Grid.SetColumn(remove, 1); row.Children.Add(remove);
+            var menu = new ContextMenu();
+            var moveUp = new MenuItem { Header = "Move up", IsEnabled = up.IsEnabled }; moveUp.Click += (_, _) => { _queue.RemoveAt(index); _queue.Insert(index - 1, clip); DrawQueue(); };
+            var moveDown = new MenuItem { Header = "Move down", IsEnabled = down.IsEnabled }; moveDown.Click += (_, _) => { _queue.RemoveAt(index); _queue.Insert(index + 1, clip); DrawQueue(); };
+            var duplicate = new MenuItem { Header = "Duplicate" }; duplicate.Click += (_, _) => { _queue.Insert(index + 1, clip.Copy()); DrawQueue(); };
+            menu.Items.Add(moveUp); menu.Items.Add(moveDown); menu.Items.Add(duplicate); choose.ContextMenu = menu;
             QueueList.Children.Add(row);
         }
         _pickingClip = true;
         ClipPicker.ItemsSource = _queue.ToList();
         ClipPicker.SelectedItem = _selected;
         _pickingClip = false;
+        UpdateExportSummary();
+    }
+
+    private void AddSection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_selected is not { } clip || _exportCancel != null) return;
+        var item = clip.Copy();
+        item.QueueId = Guid.NewGuid();
+        item.QueuedRepair = CurrentRepair();
+        item.QueuedRepair.Name = _basePreset?.Name ?? "Custom";
+        item.QueuedPreserveOsd = PreserveOsd.IsChecked == true;
+        _exportQueue.Add(item);
+        UpdateExportSummary();
+        ExportStatus.Text = $"Added section to queue ({_exportQueue.Count}).";
+    }
+
+    private async void ManageQueue_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_exportCancel != null) return;
+        var dialog = new Window { Title = "Export queue", Width = 520, Height = 320, MinHeight = 220, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var root = new DockPanel { Margin = new Thickness(14) };
+        var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Margin = new Thickness(0,12,0,0) };
+        DockPanel.SetDock(footer, Dock.Bottom);
+        var clear = new Button { Content = "Remove all", Height = 30 }; var close = new Button { Content = "Close", Height = 30, Width = 82, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center };
+        close.Classes.Add("accent"); Grid.SetColumn(close, 2);
+        footer.Children.Add(clear); footer.Children.Add(close); root.Children.Add(footer);
+        var summary = new TextBlock { Margin = new Thickness(0,0,0,10), Foreground = Brush.Parse("#AEB6BC") };
+        DockPanel.SetDock(summary, Dock.Top); root.Children.Add(summary);
+        var list = new StackPanel { Spacing = 6 }; root.Children.Add(new ScrollViewer { Content = list });
+        void Refresh()
+        {
+            list.Children.Clear(); clear.IsEnabled = _exportQueue.Count > 0;
+            summary.Text = $"{_exportQueue.Count} sections · {Clock(_exportQueue.Sum(c => c.Kept))} total";
+            if (_exportQueue.Count == 0) list.Children.Add(new TextBlock { Text = "Queue is empty" });
+            foreach (var item in _exportQueue.ToList())
+            {
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
+                var info = new StackPanel { Spacing = 3 };
+                info.Children.Add(new TextBlock { Text = $"{_exportQueue.IndexOf(item)+1:00}  {item}", FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+                info.Children.Add(new TextBlock { Text = $"{Clock(item.In)} – {Clock(item.Out)} · {Clock(item.Kept)}", Foreground = Brush.Parse("#AEB6BC"), FontSize = 11 });
+                if (item.QueuedRepair is { } repair)
+                {
+                    info.Children.Add(new TextBlock { Text = repair.Name, Foreground = Brush.Parse("#0A84FF") });
+                    info.Children.Add(new TextBlock { Text = $"Repair {(repair.Signal == "analog" ? repair.Colour : repair.Block)}% · Sharpness {repair.Detail}% · Saturation {repair.Saturation}% · Contrast {repair.Contrast}%", FontSize = 11, TextWrapping = TextWrapping.Wrap });
+                    info.Children.Add(new TextBlock { Text = item.QueuedPreserveOsd == true ? "Preserve OSD" : "OSD protection off", FontSize = 11 });
+                }
+                row.Children.Add(info);
+                Button QueueAction(string data, string colour, string label)
+                {
+                    var button = new Button { Content = VectorIcon(data, colour, false), Width = 30, Height = 30,
+                        Padding = new Thickness(0), HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                        VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center };
+                    ToolTip.SetTip(button, label);
+                    Avalonia.Automation.AutomationProperties.SetName(button, label);
+                    return button;
+                }
+                var actions = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 5,
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+                var edit = QueueAction("M1,9 L1.8,6.2 L7.5,0.5 L9.5,2.5 L3.8,8.2 Z M6,2 L8,4", "#AEB6BC", "Edit queued restoration");
+                var remove = QueueAction("M1,2.5 L9,2.5 M3,2.5 L3,0.5 L7,0.5 L7,2.5 M2,3 L2.6,9.5 L7.4,9.5 L8,3 M4,4.5 L4,7.5 M6,4.5 L6,7.5", "#FF453A", "Remove from queue");
+                edit.Click += async (_, _) => { await EditQueuedRepair(item, dialog); Refresh(); };
+                actions.Children.Add(edit); actions.Children.Add(remove);
+                Grid.SetColumn(actions, 1); row.Children.Add(actions);
+                remove.Click += (_, _) => { _exportQueue.Remove(item); Refresh(); };
+                var card = new Border { Child = row, Padding = new Thickness(10) }; card.Classes.Add("card"); list.Children.Add(card);
+            }
+            UpdateExportSummary();
+        }
+        clear.Click += (_, _) => { _exportQueue.Clear(); Refresh(); }; close.Click += (_, _) => dialog.Close();
+        Refresh(); dialog.Content = root; await dialog.ShowDialog(this);
+    }
+
+    private async Task EditQueuedRepair(FootageItem item, Window owner)
+    {
+        if (item.QueuedRepair is not { } original) return;
+        var repair = original.Clone();
+        var dialog = new Window { Title = "Edit queued restoration", Width = 400, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var panel = new StackPanel { Margin = new Thickness(16), Spacing = 8 };
+        var preset = new ComboBox { ItemsSource = RepairPreset.BuiltIn.Where(p => p.Signal == repair.Signal).Concat(_settings.Presets.Where(p => p.Signal == repair.Signal)).ToList(), DisplayMemberBinding = new Avalonia.Data.Binding("Name"), HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch, PlaceholderText = repair.Name };
+        panel.Children.Add(preset);
+        var labels = new[] { "Repair strength", "Sharpness", "Saturation", "Contrast" };
+        var fields = new NumericUpDown[4];
+        for (var i = 0; i < fields.Length; i++)
+        {
+            panel.Children.Add(new TextBlock { Text = labels[i] });
+            fields[i] = new NumericUpDown { Minimum = i == 3 ? 50 : 0, Maximum = i == 3 ? 150 : i < 2 ? 100 : 200, Increment = 1 };
+            panel.Children.Add(fields[i]);
+        }
+        void Sync() { fields[0].Value = repair.Signal == "analog" ? repair.Colour : repair.Block; fields[1].Value = repair.Detail; fields[2].Value = repair.Saturation; fields[3].Value = repair.Contrast; }
+        Sync();
+        preset.SelectionChanged += (_, _) => { if (preset.SelectedItem is RepairPreset selected) { repair = selected.AppliedTo(repair); repair.Name = selected.Name; Sync(); } };
+        var preserve = new CheckBox { Content = "Preserve OSD", IsChecked = item.QueuedPreserveOsd == true }; panel.Children.Add(preserve);
+        var actions = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, Spacing = 8 };
+        var cancel = new Button { Content = "Cancel" }; var save = new Button { Content = "Save" }; save.Classes.Add("accent");
+        cancel.Click += (_, _) => dialog.Close();
+        save.Click += (_, _) => { if (repair.Signal == "analog") repair.Colour = (int)(fields[0].Value ?? 0); else repair.Block = (int)(fields[0].Value ?? 0); repair.Detail = (int)(fields[1].Value ?? 0); repair.Saturation = (int)(fields[2].Value ?? 100); repair.Contrast = (int)(fields[3].Value ?? 100); item.QueuedRepair = repair; item.QueuedPreserveOsd = preserve.IsChecked == true; dialog.Close(); };
+        actions.Children.Add(cancel); actions.Children.Add(save); panel.Children.Add(actions); dialog.Content = panel; await dialog.ShowDialog(owner);
+    }
+
+    private void NewSession_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_exportCancel != null) return;
+        StopPlay(); _autoRender.Stop(); _previewCancel?.Cancel(); DeleteLiveTicket();
+        _selected = null; _queue.Clear(); _exportQueue.Clear(); _head = 0;
+        _reviewOutput = null; _reviewSource = null; _reviewClip = null;
+        SimpleExportResult.IsVisible = false; ClearSelection(); DrawQueue();
+        Timeline.Head = 0; PlayheadLabel.Text = ""; HoverBadge.IsVisible = false; TrimLoading.IsVisible = false;
+        InBox.Text = ""; OutBox.Text = ""; CutSummary.Text = ""; KeptLabel.Text = ""; PartsLabel.Text = "";
+        CompareAfter.Source = null; CompareDivider.IsVisible = false; UpdateViewButtons(); _signalSettled.Clear();
+        ApplyLevel("analog", "normal"); PreserveOsd.IsChecked = true; ShowOsdMask.IsChecked = false;
+        ExportName.Text = ""; ExportStatus.Text = "Ready"; ExportRunText.Text = ""; ExportTime.Text = ""; ExportProgress.Value = 0;
     }
 
     /// <summary>Finds the 4:3 picture inside the bars once per clip, for cropped previews.</summary>
@@ -688,7 +817,11 @@ public partial class MainWindow : Window
 
     private void ClearSelection()
     {
-        TrimPreview.Source = null;
+        WorkspaceCompare.IsVisible = false;
+        PreviewHost.IsVisible = true;
+        TrimPreview.Source = null; PlayheadLabel.Text = "";
+        SourceDetails.Text = "Select a recording";
+        SourceLabels.IsVisible = false;
         Timeline.Duration = 1; Timeline.SetSegments([]); Timeline.SetBookmarks([]); Timeline.SetThumbnails([]); Timeline.SetWaveform(null, false);
         StripStatus.Text = "Choose a clip to build its filmstrip.";
         TrimHint.Text = "Pick the part to keep";
@@ -702,7 +835,17 @@ public partial class MainWindow : Window
     private void Select(FootageItem clip)
     {
         StopPlay();
+        WorkspaceCompare.IsVisible = false;
+        PreviewHost.IsVisible = true;
+        UpdateViewButtons();
         _selected = clip;
+        ExportName.Text = System.IO.Path.GetFileNameWithoutExtension(clip.Path) + "-cleaned";
+        ExportName.IsEnabled = true;
+        var aspect = DisplayAspect(clip);
+        var ratio = Math.Abs(aspect - 4.0/3) < .02 ? "4:3" : Math.Abs(aspect - 16.0/9) < .02 ? "16:9" : Math.Abs(aspect - 1.25) < .02 ? "5:4" : $"{aspect:0.##}:1";
+        SourceDetails.Text = $"{DisplayWidth(clip, clip.Height)} × {clip.Height}\n{ratio}\n{clip.Fps:0.##} fps\n{(clip.Bitrate > 0 ? $"{clip.Bitrate / 1000000.0:0.##} Mbps" : "Unknown")}\n{clip.Size / 1000000.0:0.##} MB\n{Clock(clip.Duration)}";
+        SourceLabels.IsVisible = true;
+        RefreshOutputHeights();
         _head = clip.In;
         Timeline.Duration = clip.Duration;
         Timeline.SetSegments(clip.Segments);
@@ -715,7 +858,7 @@ public partial class MainWindow : Window
         LayoutStrip();
         RequestFrame();
         if (!clip.StripRequested) _ = LoadStripAsync(clip);
-        if (!clip.WaveformRequested && clip.HasAudio) _ = LoadWaveformAsync(clip);
+
         ShowOsdState();
         SettleSignal(clip);
         RequestAutoRender();
@@ -736,7 +879,7 @@ public partial class MainWindow : Window
             if (_selected == clip)
             {
                 Timeline.SetThumbnails(clip.Strip);
-                StripStatus.Text = $"{clip.Strip.Count} thumbnails · Ctrl+wheel zooms in for finer cuts.";
+                StripStatus.Text = "Drag the trim handles or press I / O.";
                 ShowThumbnail(_head);
             }
         }
@@ -758,15 +901,12 @@ public partial class MainWindow : Window
 
     private void HookTimeline()
     {
-        Timeline.HeadChanged += seconds => { StopPlay(); _head = seconds; PlaceMarkers(); };
+        Timeline.HeadChanged += seconds => { StopPlay(); _head = seconds; PlaceMarkers(); ShowThumbnail(seconds); };
         Timeline.SelectionChanged += index =>
         {
             if (_selected == null) return;
             UpdateCutFields();
-            StripStatus.Text = index >= 0 && _selected.Segments.Count > 1
-                ? $"Part {index + 1} selected: Remove part (Delete) takes it out, drag its [ ] edges to trim it."
-                : index >= 0 ? "Split (S) at the playhead cuts the clip into parts; remove the parts you don't want."
-                : "This part was removed. Click a kept part to select it.";
+            StripStatus.Text = "Drag the trim handles or press I / O.";
         };
         Timeline.EditStarted += PushUndo;
         Timeline.SegmentsChanged += () =>
@@ -781,6 +921,7 @@ public partial class MainWindow : Window
             HoverBadge.IsVisible = false;
             ShowThumbnail(_head);
             RequestFrame();
+            RequestAutoRender();
             if (kind != TimelineView.DragKind.Playhead) DrawQueue();
         };
         Timeline.HoverChanged += seconds =>
@@ -794,7 +935,7 @@ public partial class MainWindow : Window
             _frameDelay.Stop();
             ShowThumbnail(seconds);
         };
-        Timeline.ZoomRequested += (factor, anchor, pointerX) => ZoomTo(ZoomSlider.Value * factor, anchor, pointerX - StripScroller.Offset.X);
+
         Timeline.ScrollRequested += pixels =>
             StripScroller.Offset = new Vector(Math.Clamp(StripScroller.Offset.X + pixels, 0, Math.Max(0, Timeline.Width - StripScroller.Bounds.Width)), 0);
     }
@@ -1003,7 +1144,7 @@ public partial class MainWindow : Window
     private void Snap_Changed(object? sender, RoutedEventArgs e)
     {
         if (Timeline == null || SnapToggle == null) return;
-        Timeline.Snap = SnapToggle.IsChecked == true;
+        Timeline.Snap = false;
         RememberSettings();
     }
 
@@ -1017,7 +1158,7 @@ public partial class MainWindow : Window
         UpdateCutFields();
         KeepHeadVisible();
         ShowThumbnail(_head);
-        if (fetch) RequestFrame();
+        if (fetch) { RequestFrame(); RequestAutoRender(); }
     }
 
     private void KeepHeadVisible()
@@ -1033,7 +1174,7 @@ public partial class MainWindow : Window
     {
         if (_selected == null || _selected.Strip.Count == 0) return;
         var nearest = _selected.Strip.MinBy(tile => Math.Abs(tile.Seconds - seconds));
-        TrimPreview.Source = Cropped(nearest.Picture, _selected.Box, _selected.Width);
+        TrimPreview.Source = nearest.Picture;
     }
 
     private void RequestFrame()
@@ -1053,7 +1194,7 @@ public partial class MainWindow : Window
         try
         {
             await EngineAsync(new { action = "frame", source = clip.Path, seconds = moment, target,
-                crop = clip.Box is { } box ? new[] { box.X, box.Y, box.Width, box.Height } : null });
+                display_aspect = true });
             if (request == _frameRequest && clip == _selected && !HoverBadge.IsVisible) TrimPreview.Source = LoadBitmap(target);
         }
         catch { /* A damaged frame keeps the thumbnail in view. */ }
@@ -1086,6 +1227,64 @@ public partial class MainWindow : Window
 
     // ---- play
 
+    private void UpdateViewButtons()
+    {
+        OriginalView.Classes.Set("accent", !WorkspaceCompare.IsVisible);
+        CompareView.Classes.Set("accent", WorkspaceCompare.IsVisible);
+    }
+
+    private void WorkspaceOriginal_Click(object? sender, RoutedEventArgs e) => SetWorkspaceView(false);
+    private void WorkspaceCompare_Click(object? sender, RoutedEventArgs e) => SetWorkspaceView(true);
+
+    private void SetWorkspaceView(bool compare)
+    {
+        if (_selected == null || WorkspaceCompare.IsVisible == compare) return;
+        var resume = _playing;
+        StopPlay();
+        WorkspaceCompare.IsVisible = compare;
+        PreviewHost.IsVisible = !compare;
+        UpdateViewButtons();
+        if (compare) { CompareSlider.Value = 50; CompareAfter.Source = null; CompareDivider.IsVisible = false; UpdateCompare(); }
+        if (resume) StartPlayback(_head);
+        else if (compare) RequestAutoRender();
+        else { _previewCancel?.Cancel(); RequestFrame(); }
+    }
+
+    private string? _liveTicket;
+    private void DeleteLiveTicket()
+    {
+        if (_liveTicket != null) { try { File.Delete(_liveTicket); } catch (IOException) { } _liveTicket = null; }
+    }
+
+    private void PlayRestored(FootageItem clip, double moment, bool singleFrame = false)
+    {
+        _player.Stop();
+        DeleteLiveTicket();
+        _liveTicket = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dvr-live-{Guid.NewGuid():N}.json");
+        PreviewStatus.Text = "Preparing restoration…";
+        _player.PlayRestored(moment, clip.Fps, clip.Width, clip.Height, clip.Sar, (width, height, fps) =>
+        {
+            File.WriteAllText(_liveTicket, JsonSerializer.Serialize(new { action = "live_pairs", source = clip.Path,
+                seconds = moment, width, height, fps, single_frame = singleFrame, show_osd_mask = ShowOsdMask.IsChecked == true, recipe = BuildRecipe(clip), mode = Mode, model = ModelPath.Text }));
+            return EngineStart(_liveTicket);
+        });
+    }
+
+    private void OnWorkspacePair(WriteableBitmap original, WriteableBitmap restored, double moment)
+    {
+        if (_selected == null || !WorkspaceCompare.IsVisible) return;
+        if (_playing && moment >= _selected.Out) { EndTrimPlayback(); return; }
+        _head = moment;
+        _compareAspect = DisplayAspect(_selected);
+        CompareBefore.Source = original; CompareAfter.Source = restored;
+        CompareBefore.InvalidateVisual(); CompareAfter.InvalidateVisual();
+        CompareHint.IsVisible = false; CompareDivider.IsVisible = true;
+        LookCompare.IsVisible = false;
+        CompareLeftLabel.Text = "ORIGINAL"; CompareRightLabel.Text = "RESTORED";
+        PreviewStatus.Text = "Live restoration · export processing stages";
+        UpdateCompare(); PlaceMarkers(); KeepHeadVisible();
+    }
+
     private void Play_Click(object? sender, RoutedEventArgs e) => TogglePlay();
 
     private void TogglePlay()
@@ -1093,25 +1292,24 @@ public partial class MainWindow : Window
         if (_selected == null) return;
         if (_playing) { StopPlay(); return; }
         var from = _head;
-        if (from >= _selected.Out - 0.05) from = _selected.In;
-        if (Timeline.SegmentAt(from) < 0)
-        {
-            // Start at the next kept part instead of playing a removed gap.
-            var next = _selected.Segments.FirstOrDefault(part => part.In > from);
-            from = next == default ? _selected.In : next.In;
-        }
+        if (from < _selected.In || from >= _selected.Out - 0.0001) from = _selected.In;
         StartPlayback(from);
     }
 
     private void StartPlayback(double from)
     {
         if (_selected == null) return;
+        if (from < _selected.In || from >= _selected.Out) from = _selected.In;
         HoverBadge.IsVisible = false;
         _frameDelay.Stop();
+        _autoRender.Stop(); _previewCancel?.Cancel();
         _playing = true;
-        PlayButton.Content = "⏸ Pause";
-        try { _player.Play(_selected.Path, from, _selected.Fps, _selected.Width, _selected.Height, _selected.Box); }
-        catch (Exception ex) { _playing = false; PlayButton.Content = "▶ Play"; StripStatus.Text = $"Playback unavailable: {ex.Message}"; }
+        UpdatePlayIcon(true);
+        try {
+            if (WorkspaceCompare.IsVisible) PlayRestored(_selected, from);
+            else _player.Play(_selected.Path, from, _selected.Fps, _selected.Width, _selected.Height, null, _selected.Sar);
+        }
+        catch (Exception ex) { _playing = false; UpdatePlayIcon(false); StripStatus.Text = $"Playback unavailable: {ex.Message}"; }
     }
 
     private void StopPlay()
@@ -1119,23 +1317,14 @@ public partial class MainWindow : Window
         if (!_playing) return;
         _playing = false;
         _player.Stop();
-        PlayButton.Content = "▶ Play";
-        RequestFrame();
+        UpdatePlayIcon(false);
+        RequestFrame(); RequestAutoRender();
     }
 
     private void OnPlaybackFrame(WriteableBitmap bitmap, double moment)
     {
         if (!_playing || _selected == null) return;
-        var index = Timeline.SegmentAt(moment);
-        if (index < 0 || moment >= _selected.Segments[index].Out - 1e-6)
-        {
-            // Reached the end of a kept part: continue with the next one or stop.
-            var nextIndex = _selected.Segments.FindIndex(part => part.In > moment + 1e-6);
-            if (nextIndex >= 0) { StartPlayback(_selected.Segments[nextIndex].In); _head = _selected.Segments[nextIndex].In; }
-            else { _head = Math.Min(moment, _selected.Out); StopPlay(); }
-            PlaceMarkers(); KeepHeadVisible();
-            return;
-        }
+        if (moment >= _selected.Out) { EndTrimPlayback(); return; }
         _head = moment;
         if (!ReferenceEquals(TrimPreview.Source, bitmap)) TrimPreview.Source = bitmap;
         TrimPreview.InvalidateVisual();
@@ -1143,16 +1332,18 @@ public partial class MainWindow : Window
         KeepHeadVisible();
     }
 
-    private void ContinueOrStop()
+    private void EndTrimPlayback()
     {
-        if (_selected == null) { StopPlay(); return; }
-        var nextIndex = _selected.Segments.FindIndex(part => part.In > _head + 0.05);
-        if (nextIndex >= 0) StartPlayback(_selected.Segments[nextIndex].In);
-        else StopPlay();
+        if (_selected == null) return;
+        _head = _selected.Out;
+        StopPlay();
+        PlaceMarkers(); UpdateCutFields(); KeepHeadVisible();
     }
 
-    private void GoStart_Click(object? sender, RoutedEventArgs e) { if (_selected != null) MoveHead(_selected.In); }
-    private void GoEnd_Click(object? sender, RoutedEventArgs e) { if (_selected != null) MoveHead(_selected.Out); }
+    private void ContinueOrStop() => EndTrimPlayback();
+
+    private void GoStart_Click(object? sender, RoutedEventArgs e) { if (_selected != null) MoveHead(0); }
+    private void GoEnd_Click(object? sender, RoutedEventArgs e) { if (_selected != null) MoveHead(_selected.Duration); }
     private void Back_Click(object? sender, RoutedEventArgs e) => MoveHead(_head - 1);
     private void Forward_Click(object? sender, RoutedEventArgs e) => MoveHead(_head + 1);
 
@@ -1190,14 +1381,45 @@ public partial class MainWindow : Window
     {
         if (TrimPage == null || PageScroller == null) return;
         var dark = _page == 1;
-        PageScroller.Background = dark ? new SolidColorBrush(Color.Parse("#1B2025")) : Brushes.Transparent;
+        PageScroller.Background = dark ? new SolidColorBrush(Color.Parse("#1E1E1E")) : Brushes.Transparent;
         PageContent.Margin = dark ? new Thickness(0) : _page is 2 or 3 ? new Thickness(20, 14) : new Thickness(28, 22);
         PageContent.MaxWidth = dark ? double.PositiveInfinity : Math.Max(1180, Bounds.Width - 232 - 56 - 20);
-        if (dark) TrimPage.Height = Math.Max(420, PageScroller.Bounds.Height);
+        if (dark) Workspace.Height = Math.Max(380, PageScroller.Bounds.Height);
     }
 
-    private void ToggleFullScreen() =>
+    private void WorkspaceFullScreen_Click(object? sender, RoutedEventArgs e) => ToggleFullScreen();
+
+    private void UpdatePlayIcon(bool playing)
+    {
+        PlayButton.Content = playing ? "Ⅱ" : "▶";
+        PlayButton.Classes.Set("playing", playing);
+    }
+
+    private void ToggleFullScreen()
+    {
         WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
+        FullScreenButton.Content = WindowState == WindowState.FullScreen ? "Window" : "Full screen";
+    }
+
+    private bool _spaceHeld;
+
+    private void PlaybackShortcutReleased(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Space) return;
+        if (_spaceHeld || FocusManager?.GetFocusedElement() is not TextBox) e.Handled = true;
+        _spaceHeld = false;
+    }
+
+    private void PlaybackShortcut(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Space || FocusManager?.GetFocusedElement() is TextBox) return;
+        e.Handled = true;
+        if (_spaceHeld) return;
+        _spaceHeld = true;
+        if (BusyOverlay.IsVisible || MaskOverlay.IsVisible || ShareOverlay.IsVisible) return;
+        if (_page == 1) TogglePlay();
+        else if (_page == 3 && ReviewPanel.IsVisible && _reviewOutput != null) ReviewPlay_Click(sender, e);
+    }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
     {
@@ -1206,27 +1428,21 @@ public partial class MainWindow : Window
         if (MaskOverlay.IsVisible) { if (!BusyOverlay.IsVisible && MaskKey(e)) e.Handled = true; return; }
         if (e.Key == Key.Escape && WindowState == WindowState.FullScreen) { WindowState = WindowState.Normal; e.Handled = true; return; }
         if (_page != 1 || _selected == null || FocusManager?.GetFocusedElement() is TextBox) return;
-        var step = e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 5 : 1;
+        var step = e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 1 : 1 / Math.Max(1, _selected.Fps);
         var control = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
         switch (e.Key)
         {
-            case Key.Space: TogglePlay(); break;
+            case Key.Space: return;
             case Key.Left: StopPlay(); MoveHead(_head - step); break;
             case Key.Right: StopPlay(); MoveHead(_head + step); break;
             case Key.I when !control: MarkIn(); break;
             case Key.O when !control: MarkOut(); break;
-            case Key.S when !control: SplitAtHead(); break;
-            case Key.B when !control: ToggleBookmark(); break;
-            case Key.Delete or Key.Back: DeleteSegmentAtHead(); break;
+            case Key.X when e.KeyModifiers.HasFlag(KeyModifiers.Alt): ResetCut_Click(null, e); break;
             case Key.Z when control && e.KeyModifiers.HasFlag(KeyModifiers.Shift): RedoEdit(); break;
             case Key.Z when control: UndoEdit(); break;
             case Key.Y when control: RedoEdit(); break;
-            case Key.OemPlus or Key.Add: ZoomIn_Click(null, e); break;
-            case Key.OemMinus or Key.Subtract: ZoomOut_Click(null, e); break;
-            case Key.Home: MoveHead(_selected.In); break;
-            case Key.End: MoveHead(_selected.Out); break;
-            case Key.PageUp: JumpEdge(-1); break;
-            case Key.PageDown: JumpEdge(1); break;
+            case Key.Home: MoveHead(0); break;
+            case Key.End: MoveHead(_selected.Duration); break;
             default: return;
         }
         e.Handled = true;
@@ -1399,6 +1615,7 @@ public partial class MainWindow : Window
     {
         Signal = IsAnalog ? "analog" : "digital",
         Saturation = (int)(SaturationSlider?.Value ?? 100),
+        Brightness = _brightness, Contrast = _contrast, Gamma = _gamma, Spatial = _spatial,
         Colour = (int)ColorSlider.Value, Noise = (int)NoiseSlider.Value, Block = (int)BlockSlider.Value,
         Detail = (int)DetailSlider.Value, Motion = (int)MotionSlider.Value, Size = SizePercent,
         Osd = RemoveOsd.IsChecked == true, Effort = Effort,
@@ -1418,9 +1635,10 @@ public partial class MainWindow : Window
             BlockSlider.Value = Math.Clamp(preset.Block, 0, 100);
             DetailSlider.Value = Math.Clamp(preset.Detail, 0, 100);
             MotionSlider.Value = 0;
-            SaturationSlider.Value = Math.Clamp(preset.Saturation, 100, 125);
+            SaturationSlider.Value = Math.Clamp(preset.Saturation, 0, 200);
+            _brightness = preset.Brightness; _contrast = preset.Contrast; _gamma = preset.Gamma; _spatial = preset.Spatial;
             SizeOriginal.IsChecked = true; Size150.IsChecked = false; Size200.IsChecked = false;
-            RemoveOsd.IsChecked = preset.Osd; OsdKeep.IsChecked = !preset.Osd;
+            RemoveOsd.IsChecked = false; OsdKeep.IsChecked = true;
             EffortFast.IsChecked = false; EffortBest.IsChecked = false;
             EffortBalanced.IsChecked = true;
             QualityValue.Value = Math.Clamp(preset.Quality, 14, 32);
@@ -1434,17 +1652,18 @@ public partial class MainWindow : Window
     private object BuildRecipe(FootageItem clip) => RecipeOf(CurrentRepair(), clip);
 
     /// <summary>The engine recipe for these settings and this clip, with the export choices of the Export page.</summary>
-    private object RecipeOf(RepairPreset settings, FootageItem clip) => new
+    private object RecipeOf(RepairPreset settings, FootageItem clip, bool? preserve = null) => new
     {
         signalart = settings.Signal == "digital" ? "digital" : "analog",
         farbberuhigung = Math.Clamp(settings.Colour, 0, 100),
         blockpflege = Math.Clamp(settings.Block, 0, 100),
         kantendetail = Math.Clamp(settings.Detail, 0, 100),
         vergroesserung_prozent = 100,
-        output_height = OutputHeightChoice.SelectedIndex == 0 ? 720 : 1080,
+        output_height = SelectedOutputHeight == 0 ? clip.Height : Math.Max(clip.Height, SelectedOutputHeight),
         comparison = OutputLayoutChoice.SelectedIndex == 1,
         remove_audio = RemoveAudio.IsChecked == true,
-        saturation = Math.Clamp(settings.Saturation, 100, 125) / 100.0,
+        saturation = Math.Clamp(settings.Saturation, 0, 200) / 100.0,
+        brightness = settings.Brightness / 100.0, contrast = settings.Contrast / 100.0, gamma = settings.Gamma / 100.0, spatial = settings.Spatial / 100.0,
         bewegungsspur = Math.Clamp(settings.Motion, 0, 100),
         schnittbeginn = clip.In,
         schnittende = clip.Out,
@@ -1452,6 +1671,7 @@ public partial class MainWindow : Window
         kompressionswert = (int)(QualityValue.Value ?? 18),
         dateiziel_mb = 0,
         osd_entfernen = settings.Osd,
+        preserve_osd = (preserve ?? (PreserveOsd.IsChecked == true)) && !settings.Osd,
         rauschminderung = Math.Clamp(settings.Noise, 0, 100),
         aufwand = settings.Effort is "fast" or "best" ? settings.Effort : "balanced",
         dateiformat = OutputFormat.Id,
@@ -1499,7 +1719,7 @@ public partial class MainWindow : Window
         var shown = ImageRect(CompareCanvas, _compareAspect);
         var width = CompareCanvas.Bounds.Width;
         var edge = shown.X + shown.Width * CompareSlider.Value / 100;
-        CompareAfter.Clip = new RectangleGeometry(new Rect(edge, 0, Math.Max(0, width - edge), CompareCanvas.Bounds.Height));
+        CompareAfterClip.Clip = new RectangleGeometry(new Rect(edge, 0, Math.Max(0, width - edge), CompareCanvas.Bounds.Height));
         CompareDivider.Margin = new Thickness(edge - 1, 0, 0, 0);
         CompareGrip.Margin = new Thickness(edge - 13, 0, 0, 0);
         CompareGrip.IsVisible = CompareDivider.IsVisible;
@@ -1658,15 +1878,44 @@ public partial class MainWindow : Window
 
     private void UpdateExportSummary()
     {
-        var total = _queue.Sum(clip => clip.Kept);
-        if (_exportCancel == null) ExportStatus.Text = _queue.Count == 0 ? "Add clips in Import first." : "Ready to export.";
-        ExportButton.Content = _queue.Count > 1 ? string.Format(CultureInfo.CurrentCulture, UiText.ExportMany, _queue.Count) : UiText.ExportOne;
-        ExportSummary.Text = _queue.Count == 0 ? UiText.ExportSummaryEmpty
-            : string.Format(CultureInfo.CurrentCulture, UiText.ExportSummary, _queue.Count, Clock(total), CleanHint.Text);
+        var pending = ExportClips();
+        var total = pending.Sum(clip => clip.Kept);
+        QueueCounter.Content = $"Queue ({_exportQueue.Count})";
+        if (_exportCancel == null && !SimpleExportResult.IsVisible) { ExportStatus.Text = _selected is { } clip ? $"{DisplayWidth(clip, clip.Height)} × {clip.Height} · {clip.Fps:0.##} fps · {Clock(total)}" : ""; }
+        ExportButton.Content = "Export video";
+        ExportButton.IsEnabled = pending.Count > 0 && _exportCancel == null;
+        AddSectionButton.IsEnabled = _selected != null && _exportCancel == null;
+        ExportName.IsEnabled = true;
+        ExportSummary.Text = pending.Count == 0 ? UiText.ExportSummaryEmpty
+            : string.Format(CultureInfo.CurrentCulture, UiText.ExportSummary, pending.Count, Clock(total), CleanHint.Text);
         ExportFoldedText.Text = string.Format(CultureInfo.CurrentCulture, UiText.ExportFoldedSummary, OutputFolderPath, OutputFormat.Title);
     }
 
-    private async void Export_Clicked(object? sender, RoutedEventArgs e) => await ExportAsync(_queue.ToList(), SuffixBox.Text?.Trim() ?? "");
+    private Window? _exportDialog;
+    private async void Export_Clicked(object? sender, RoutedEventArgs e)
+    {
+        if (_exportCancel != null || _exportDialog != null || ExportClips().Count == 0) return;
+        StopPlay();
+        ShowSimpleExportSummary();
+        ShowOutputFolder();
+        ExportName.IsEnabled = true;
+        var dialog = new Window { Title = "Export video", Width = 510, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush.Parse("#242426"), FontSize = 12 };
+        var panel = new StackPanel { Margin = new Thickness(16), Spacing = 12 };
+        var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, Spacing = 8 };
+        var cancel = new Button { Content = "Cancel", Width = 100, Height = 30, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center };
+        var go = new Button { Content = "Export", Width = 100, Height = 30, Background = Brush.Parse("#0A84FF"), Foreground = Brushes.White, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center };
+        bool confirmed = false;
+        cancel.Click += (_, _) => dialog.Close();
+        go.Click += (_, _) => { confirmed = true; dialog.Close(); };
+        buttons.Children.Add(cancel); buttons.Children.Add(go);
+        ExportSettingsHost.Child = null;
+        ExportDetails.IsVisible = true;
+        panel.Children.Add(ExportDetails); panel.Children.Add(buttons); dialog.Content = panel;
+        _exportDialog = dialog;
+        try { await dialog.ShowDialog(this); }
+        finally { panel.Children.Remove(ExportDetails); ExportSettingsHost.Child = ExportDetails; _exportDialog = null; }
+        if (confirmed) await ExportAsync(ExportClips().Select(c => c.Copy()).ToList(), SuffixBox.Text?.Trim() ?? "");
+    }
 
     /// <summary>One click: settings from the measurement, then the original is exported again as a new file.</summary>
     private async void AutoRefine_Click(object? sender, RoutedEventArgs e)
@@ -1687,7 +1936,12 @@ public partial class MainWindow : Window
     private void ShowExportRunning(bool running)
     {
         ExportRunning.IsVisible = running;
-        ExportButton.IsEnabled = !running;
+        ExportIdle.IsVisible = !running;
+        ExportButton.IsVisible = !running;
+        CancelExportButton.IsVisible = running;
+        QueueCounter.IsEnabled = !running;
+        ExportButton.IsEnabled = !running && ExportClips().Count > 0;
+        AddSectionButton.IsEnabled = !running && _selected != null;
         ExportDetails.IsEnabled = !running;
         ExportFoldButton.IsEnabled = !running;
         CancelExportButton.IsEnabled = running;
@@ -1698,7 +1952,7 @@ public partial class MainWindow : Window
     private async Task ExportAsync(List<FootageItem> clips, string suffix)
     {
         if (_exportCancel != null) return;
-        if (clips.Count == 0) { ExportStatus.Text = "Add clips in Import first."; return; }
+        if (clips.Count == 0) { ExportStatus.Text = "Open a video first."; return; }
         var folder = OutputFolderPath;
         if (string.IsNullOrWhiteSpace(folder)) { ExportStatus.Text = "Choose a destination folder."; return; }
         if (Mode == "model" && !File.Exists(ModelPath.Text)) { ExportStatus.Text = "Choose a trained model under Repair → Advanced."; return; }
@@ -1709,25 +1963,28 @@ public partial class MainWindow : Window
         RememberSettings();
         var join = false;
         SimpleExportResult.IsVisible = false;
+        ExportIdle.IsVisible = true;
         var usedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var targets = new List<string>();
         // The file extension follows the chosen format; the engine checks that they match.
         var extension = OutputFormat.Extension;
         var joined = System.IO.Path.Combine(folder, System.IO.Path.GetFileNameWithoutExtension(clips[0].Path) + suffix + "-joined" + extension);
-        foreach (var clip in clips)
+        var customName = ExportName.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(customName) && customName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+            customName = customName[..^extension.Length].Trim();
+        if (string.IsNullOrWhiteSpace(customName)) customName = System.IO.Path.GetFileNameWithoutExtension(clips[0].Path) + suffix;
+        if (customName.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0 || customName.Contains('\\') || customName.Contains('/') || customName.StartsWith('.'))
+        { ExportStatus.Text = "Invalid output filename."; return; }
+        for (var i = 0; i < clips.Count; i++)
         {
-            var baseName = System.IO.Path.GetFileNameWithoutExtension(clip.Path);
-            // Parts of a joined export are hidden files that disappear after joining.
-            var prefix = join ? "." : "";
-            var target = System.IO.Path.Combine(folder, $"{prefix}{baseName}{suffix}{extension}");
-            for (var number = 2; !usedTargets.Add(target) || File.Exists(target); number++)
-                target = System.IO.Path.Combine(folder, $"{prefix}{baseName}{suffix}-{number}{extension}");
-            if (System.IO.Path.GetFullPath(target).Equals(System.IO.Path.GetFullPath(clip.Path), StringComparison.OrdinalIgnoreCase))
-            { ExportStatus.Text = "Source and output must differ."; return; }
+            var stem = customName + (clips.Count > 1 ? $"_{i + 1}" : "");
+            var target = System.IO.Path.Combine(folder, stem + extension);
+            for (var number = 2; File.Exists(target) || !usedTargets.Add(target); number++)
+                target = System.IO.Path.Combine(folder, $"{stem}-{number}{extension}");
             targets.Add(target);
         }
         // The settings are fixed when the export starts: the pages stay usable while it runs.
-        var recipes = clips.Select(BuildRecipe).ToList();
+        var recipes = clips.Select(c => RecipeOf(c.QueuedRepair ?? CurrentRepair(), c, c.QueuedPreserveOsd)).ToList();
         var mode = Mode;
         var model = ModelPath.Text;
         var quality = (int)(QualityValue.Value ?? 18);
@@ -1740,17 +1997,23 @@ public partial class MainWindow : Window
         ShowExportRunning(true);
         _exportClock.Start();
         var finished = 0.0;
+        var completedCount = 0;
+        var verified = new List<(FootageItem Clip, string Target)>();
+        _lastExportCount = 0;
         try
         {
             for (var i = 0; i < clips.Count; i++)
             {
                 var clip = clips[i];
                 var target = targets[i];
+                ExportStatus.Foreground = Brush.Parse("#B4B0AA");
                 ExportStatus.Text = "";
-                ExportRunText.Text = clips.Count == 1 ? $"Rendering {clip}" : $"Rendering {i + 1} of {clips.Count}: {clip}";
+                ExportRunText.Text = clips.Count == 1 ? $"{System.IO.Path.GetFileName(target)}" : $"{i + 1}/{clips.Count}: {System.IO.Path.GetFileName(target)}";
                 ExportHint.Text = $"Rendering {i + 1}/{clips.Count}";
                 var before = finished;
                 var share = clip.Kept / total;
+                var sampleClock = Stopwatch.StartNew();
+                var sampleKey = EstimateKey(clip);
                 try
                 {
                     await EngineAsync(new { action = "export", source = clip.Path, target, recipe = recipes[i], mode, model,
@@ -1769,6 +2032,10 @@ public partial class MainWindow : Window
                     ExportHint.Text = "Canceled";
                     return;
                 }
+                await VerifyVisibleOutput(target);
+                sampleClock.Stop();
+                if (clip.Kept > 0 && File.Exists(target))
+                    _exportSamples[sampleKey] = (sampleClock.Elapsed.TotalSeconds / clip.Kept, new FileInfo(target).Length / clip.Kept);
                 finished = before + share;
                 _exportDone = finished;
                 StopReviewPlayback();
@@ -1779,12 +2046,14 @@ public partial class MainWindow : Window
                     _reviewOutInfo = (made.GetProperty("width").GetInt32(), made.GetProperty("height").GetInt32(),
                         made.TryGetProperty("fps", out var fps) ? fps.GetDouble() : clip.Fps);
                 }
-                catch { _reviewOutInfo = (clip.Width, clip.Height, clip.Fps); }
+                catch (Exception ex) { throw new IOException("Export could not be read", ex); }
                 ReviewTitle.Text = $"{clip} · original and cleaned result";
                 _reviewSeeking = true; ReviewSeek.Maximum = clip.Kept; ReviewSeek.Value = 0; _reviewSeeking = false;
                 ReviewPanel.IsVisible = false;
-                SimpleExportResult.IsVisible = true;
+
                 SimpleOutputPath.Text = target;
+                verified.Add((clip, target));
+                completedCount++;
                 Dispatcher.UIThread.Post(() => { _reviewSeeking = true; ReviewSeek.Value = 0; _reviewSeeking = false; });
 
             }
@@ -1812,19 +2081,43 @@ public partial class MainWindow : Window
                 }
             }
             ExportProgress.Value = 100;
+            ExportStatus.Foreground = Brush.Parse("#34C759");
             ExportStatus.Text = join
                 ? $"Exported {clips.Count} clip(s) joined into {System.IO.Path.GetFileName(joined)} in {Duration(DateTime.UtcNow - _exportStarted)}."
-                : $"Exported {clips.Count} clip(s) in {Duration(DateTime.UtcNow - _exportStarted)}.";
+                : $"Export complete · {completedCount}/{clips.Count} files · {Duration(DateTime.UtcNow - _exportStarted)}";
             ExportHint.Text = "Done";
+            SimpleExportResult.IsVisible = true;
             FinishExport(folder);
         }
-        catch (Exception ex) { ExportStatus.Text = $"Export failed: {ex.Message}"; ExportHint.Text = "Failed"; }
+        catch (Exception ex) { ExportStatus.Foreground = Brush.Parse("#FF7777"); ExportStatus.Text = $"Export failed · {completedCount}/{clips.Count} files: {ex.Message}"; ExportHint.Text = "Failed"; }
         finally
         {
+            foreach (var output in verified)
+            {
+                if (output.Clip.QueueId != Guid.Empty) _exportQueue.RemoveAll(q => q.QueueId == output.Clip.QueueId);
+                _lastExportCount++;
+            }
+            _reviewOutput = verified.Count > 0 ? verified[^1].Target : null;
+            PlayExportButton.IsVisible = _lastExportCount == 1;
+            SimpleExportResult.IsVisible = _lastExportCount > 0;
+            UpdateExportSummary();
             _exportClock.Stop(); ExportTime.Text = "";
             _exportCancel.Dispose(); _exportCancel = null;
             ShowExportRunning(false);
             ShowOutputFolder();
+        }
+    }
+
+    private int _lastExportCount;
+    private static async Task VerifyVisibleOutput(string target)
+    {
+        if (!File.Exists(target) || new FileInfo(target).Length == 0) throw new IOException($"Missing output: {target}");
+        if (OperatingSystem.IsMacOS())
+        {
+            using var process = Process.Start(new ProcessStartInfo("/usr/bin/chflags") { ArgumentList = { "nohidden", target }, UseShellExecute = false });
+            if (process == null) throw new IOException("Could not verify Finder visibility");
+            await process.WaitForExitAsync();
+            if (process.ExitCode != 0) throw new IOException($"Could not make output visible: {target}");
         }
     }
 
@@ -1844,12 +2137,10 @@ public partial class MainWindow : Window
     /// <summary>Exports take minutes: bring the window back and open the folder if wanted.</summary>
     private void FinishExport(string folder)
     {
+        ShowSimpleExportSummary();
         if (ReviewPanel.IsVisible) FoldExportSettings(true);
         try { Activate(); } catch { /* Not every window manager allows it. */ }
-        if (OpenAfterExport.IsChecked == true && Directory.Exists(folder))
-        {
-            try { OpenInFileManager(folder); } catch { /* The status line already says where the files are. */ }
-        }
+
     }
 
     private void CancelExport_Click(object? sender, RoutedEventArgs e)
@@ -1894,13 +2185,12 @@ public partial class MainWindow : Window
         try
         {
             var moment = ReviewSeek.Value;
-            var sourceBox = _reviewClip?.Box;
-            var outputBox = ScaledBox(sourceBox, _reviewClip?.Width ?? 0, _reviewOutInfo.Width);
+
             await Task.WhenAll(
                 EngineAsync(new { action = "frame", source = _reviewSource, seconds = SourceTimeOf(moment), target = before,
-                    crop = sourceBox is { } sb ? new[] { sb.X, sb.Y, sb.Width, sb.Height } : null }),
+                    display_aspect = true, crop = (int[]?)null }),
                 EngineAsync(new { action = "frame", source = _reviewOutput, seconds = moment, target = after,
-                    crop = outputBox is { } ob ? new[] { ob.X, ob.Y, ob.Width, ob.Height } : null }));
+                    display_aspect = true, crop = (int[]?)null }));
             var original = LoadBitmap(before);
             var cleaned = LoadBitmap(after);
             _reviewAspect = (double)cleaned.PixelSize.Width / Math.Max(1, cleaned.PixelSize.Height);
@@ -1953,10 +2243,9 @@ public partial class MainWindow : Window
             _reviewPairOffset = outputSeconds - source;
             // One decoder for both clips keeps them frame-accurate; the original side
             // is restarted at the next kept part when the cleaned clip crosses a cut.
-            var outputBox = ScaledBox(_reviewClip.Box, _reviewClip.Width, _reviewOutInfo.Width);
             _reviewPair.PlayPair(_reviewOutput, outputSeconds, _reviewSource, source, _reviewOutInfo.Fps,
-                _reviewOutInfo.Width, _reviewOutInfo.Height, outputBox, _reviewClip.Box);
-            if (outputBox is { } shown && shown.Height > 0) _reviewAspect = (double)shown.Width / shown.Height;
+                _reviewOutInfo.Width, _reviewOutInfo.Height);
+            _reviewAspect = DisplayAspect(_reviewClip);
         }
         catch (Exception ex) { StopReviewPlayback(); ReviewNote.Text = $"Playback unavailable: {ex.Message}"; }
     }

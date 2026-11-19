@@ -210,6 +210,19 @@ class LookExportTests(unittest.TestCase):
             self.assertLess(after[corner].mean(), 100)
             self.assertAlmostEqual(after[middle].mean(), 128, delta=6)
 
+    def test_osd_protection_is_explicit_for_legacy_recipes(self):
+        from flugbild.recipe import Arbeitsrezept
+        from flugbild.restoration import protect_overlay
+        self.assertFalse(Arbeitsrezept().preserve_osd)
+        self.assertTrue(Arbeitsrezept(preserve_osd=True).preserve_osd)
+        original = np.full((32, 32, 3), 200, np.uint8)
+        repaired = np.full_like(original, 40)
+        mask = np.zeros((32, 32), np.uint8)
+        mask[14:18, 14:18] = 255
+        result = protect_overlay(original, repaired, mask)
+        np.testing.assert_array_equal(result[14:18, 14:18], original[14:18, 14:18])
+        np.testing.assert_array_equal(result[:8, :8], repaired[:8, :8])
+
     def test_preview_writes_the_frame_without_the_look_too(self):
         with tempfile.TemporaryDirectory() as workdir:
             folder = Path(workdir)

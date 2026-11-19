@@ -1,0 +1,15 @@
+{
+  "python": "3.12.16",
+  "openssl": "OpenSSL 3.5.9",
+  "packages": {
+    "numpy": "2.5.4",
+    "pillow": "13.0.0",
+    "opencv-python-headless": "5.0.0.93",
+    "pyinstaller": "6.22.3"
+  },
+  "sha256": {
+    "opencv": "d7d10ff5648202641af7806aebf8a8f530e84967247555b5c2f920d3b160463d",
+    "ffmpeg": "3a31801237f940cf08ee4dcd9e18a493f09d31a1885db6fcd17a5e62682a068b",
+    "ffprobe": "78e0f60a0f6a53061908399443d9d2b2ec62c8538e22aee4e9a0eee41b5d3f0c"
+  }
+}

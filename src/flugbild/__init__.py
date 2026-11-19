@@ -1,3 +1,3 @@
-"""Independent FPV DVR Cleaner desktop application."""
+"""DVR Remaster desktop application."""
 
-__version__ = "0.7.2"
+__version__ = "1.0.0"

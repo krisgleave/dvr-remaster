@@ -19,7 +19,7 @@ namespace FpvDvrCleaner.Desktop;
 /// </summary>
 public sealed class FramePlayer : IDisposable
 {
-    public const int PreviewWidth = 960;
+    public const int PreviewWidth = 1350;
 
     private readonly string _ffmpeg;
     private Process? _process;
@@ -38,6 +38,7 @@ public sealed class FramePlayer : IDisposable
     public event Action<WriteableBitmap, WriteableBitmap, double>? PairShown;
     /// <summary>Called on the UI thread when the decoder reached the end of the file.</summary>
     public event Action? Ended;
+    public event Action<string>? Failed;
 
     public bool IsPlaying => _process is { HasExited: false } && !_stopping;
 
@@ -65,18 +66,48 @@ public sealed class FramePlayer : IDisposable
         box is { } b && b.Width > 0 && b.Height > 0 ? $"crop={b.Width}:{b.Height}:{b.X}:{b.Y}," : "";
 
     public void Play(string path, double start, double fps, int sourceWidth, int sourceHeight,
-                     (int X, int Y, int Width, int Height)? box = null)
+                     (int X, int Y, int Width, int Height)? box = null, double sar = 1)
     {
         Stop();
         _stopping = false;
         _start = Math.Max(0, start);
         _fps = fps is > 1 and <= 240 ? fps : 30;
-        var (width, height) = PreviewSize(box?.Width ?? sourceWidth, box?.Height ?? sourceHeight);
+        var (width, height) = PreviewSize(Math.Max(2, (int)Math.Round((box?.Width ?? sourceWidth) * sar)), box?.Height ?? sourceHeight);
         var bitmap = Prepare(ref _bitmap, width, height);
         _second = null;
         Launch(["-ss", Number(_start), "-i", path, "-an", "-sn",
                 "-vf", $"{CropFilter(box)}fps={Number(_fps)},scale={width}:{height}:flags=fast_bilinear"],
             bitmap, null, width, height);
+    }
+
+    // Fast preview filters only; the export engine remains authoritative.
+    public void PlayFiltered(string path, double start, double fps, int sourceWidth, int sourceHeight,
+                             double sar, string filters, bool singleFrame = false)
+    {
+        Stop();
+        _stopping = false;
+        _start = Math.Max(0, start);
+        _fps = fps is > 1 and <= 240 ? fps : 30;
+        var (width, height) = PreviewSize(Math.Max(2, (int)Math.Round(sourceWidth * sar)), sourceHeight);
+        var bitmap = Prepare(ref _bitmap, width, height);
+        var other = Prepare(ref _second, width, height);
+        var graph = $"[0:v]fps={Number(_fps)},scale={width}:{height}:flags=bicubic,setsar=1,split[a][b];[b]{filters}[c];[a][c]hstack=inputs=2:shortest=1";
+        var args = new List<string> { "-ss", Number(_start), "-i", path, "-an", "-sn", "-filter_complex_threads", "2", "-filter_complex", graph + "[out]", "-map", "[out]" };
+        if (singleFrame) args.AddRange(new[] { "-frames:v", "1" });
+        Launch(args.ToArray(), bitmap, other, width, height);
+    }
+
+    public void PlayRestored(double start, double fps, int sourceWidth, int sourceHeight, double sar,
+                             Func<int, int, double, ProcessStartInfo> engine)
+    {
+        Stop();
+        _stopping = false;
+        _start = Math.Max(0, start);
+        _fps = fps is > 1 and <= 240 ? fps : 30;
+        var (width, height) = PreviewSize(Math.Max(2, (int)Math.Round(sourceWidth * sar)), sourceHeight);
+        var bitmap = Prepare(ref _bitmap, width, height);
+        var other = Prepare(ref _second, width, height);
+        LaunchProcess(engine(width, height, _fps), bitmap, other, width, height, true);
     }
 
     /// <summary>Original and cleaned clip from the given moments, decoded as one synchronised pair.</summary>
@@ -108,14 +139,19 @@ public sealed class FramePlayer : IDisposable
         foreach (var argument in new[] { "-hide_banner", "-loglevel", "error", "-nostdin" }.Concat(input)
                      .Concat(["-f", "rawvideo", "-pix_fmt", "bgra", "-"]))
             info.ArgumentList.Add(argument);
+        LaunchProcess(info, bitmap, second, width, height, false);
+    }
+
+    private void LaunchProcess(ProcessStartInfo info, WriteableBitmap bitmap, WriteableBitmap? second, int width, int height, bool restored)
+    {
         _process = Process.Start(info) ?? throw new InvalidOperationException("Could not start FFmpeg for playback");
-        _process.StandardError.ReadToEndAsync();
+        var errors = _process.StandardError.ReadToEndAsync();
         var process = _process;
-        _reader = new Thread(() => ReadFrames(process, bitmap, second, width, height)) { IsBackground = true, Name = "preview playback" };
+        _reader = new Thread(() => ReadFrames(process, bitmap, second, width, height, errors, restored)) { IsBackground = true, Name = "preview playback" };
         _reader.Start();
     }
 
-    private void ReadFrames(Process process, WriteableBitmap bitmap, WriteableBitmap? second, int width, int height)
+    private void ReadFrames(Process process, WriteableBitmap bitmap, WriteableBitmap? second, int width, int height, Task<string> errors, bool restored)
     {
         var rowBytes = width * 4;
         var frameBytes = rowBytes * height * (second == null ? 1 : 2);
@@ -124,9 +160,10 @@ public sealed class FramePlayer : IDisposable
         var clock = Stopwatch.StartNew();
         var frame = 0L;
         var pendingShow = 0;
+        var nextRestored = TimeSpan.Zero;
         try
         {
-            while (!_stopping)
+            while (!_stopping && process == _process)
             {
                 var read = 0;
                 while (read < frameBytes)
@@ -135,13 +172,16 @@ public sealed class FramePlayer : IDisposable
                     if (chunk <= 0) { read = -1; break; }
                     read += chunk;
                 }
-                if (read < 0) break;
-                var due = TimeSpan.FromSeconds(frame / _fps);
+                if (read < 0 || _stopping || process != _process) break;
+                if (frame == 0) clock.Restart();
+                var due = restored ? nextRestored : TimeSpan.FromSeconds(frame / _fps);
                 var wait = due - clock.Elapsed;
                 if (wait > TimeSpan.Zero) Thread.Sleep(wait);
                 frame++;
+                if (restored) nextRestored = clock.Elapsed + TimeSpan.FromSeconds(1 / _fps);
                 // Behind schedule: decode on without showing this frame, so time stays right.
-                if (clock.Elapsed - due > TimeSpan.FromSeconds(2 / _fps) || Volatile.Read(ref pendingShow) > 1) continue;
+                if (!restored && (clock.Elapsed - due > TimeSpan.FromSeconds(2 / _fps) || Volatile.Read(ref pendingShow) > 1)) continue;
+                if (restored) { while (Volatile.Read(ref pendingShow) > 0 && !_stopping && process == _process) Thread.Sleep(2); if (_stopping || process != _process) break; }
                 if (second == null)
                 {
                     using var locked = bitmap.Lock();
@@ -168,11 +208,18 @@ public sealed class FramePlayer : IDisposable
                     else PairShown?.Invoke(bitmap, second, moment);
                 }, DispatcherPriority.Render);
             }
-            if (!_stopping) Dispatcher.UIThread.Post(() => { if (process == _process) Ended?.Invoke(); });
+            if (!_stopping && process == _process)
+            {
+                process.WaitForExit();
+                var error = errors.GetAwaiter().GetResult();
+                var failed = process.ExitCode != 0 || frame == 0;
+                Dispatcher.UIThread.Post(() => { if (process != _process) return; if (failed) Failed?.Invoke(string.IsNullOrWhiteSpace(error) ? "No decoded frames" : error.Trim()); else Ended?.Invoke(); });
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // The process was killed or the pipe closed; playback simply stops.
+            if (!_stopping && process == _process)
+                Dispatcher.UIThread.Post(() => { if (process == _process) Failed?.Invoke(ex.Message); });
         }
     }
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import os
+import stat
 import shutil
 import subprocess
 import sys
@@ -177,6 +179,28 @@ def temporary_output(target: Path) -> Path:
         return Path(handle.name)
 
 
+def publish_output(pending: Path, target: Path) -> None:
+    if pending.stat().st_size == 0:
+        raise ValueError("Encoder produced an empty output")
+    if hasattr(os, "chflags") and hasattr(stat, "UF_HIDDEN"):
+        os.chflags(pending, pending.stat().st_flags & ~stat.UF_HIDDEN)
+    pending.replace(target)
+    # Finder can retain the hidden flag on a renamed temporary file. Clear it
+    # on the published pathname too, including the FinderInfo invisible bit.
+    if sys.platform == "darwin" and not target.name.startswith("."):
+        import errno
+        if hasattr(os, "chflags") and hasattr(stat, "UF_HIDDEN"):
+            os.chflags(target, target.stat().st_flags & ~stat.UF_HIDDEN)
+        try:
+            info = bytearray(os.getxattr(target, "com.apple.FinderInfo")) if hasattr(os, "getxattr") else None
+            if info is not None and len(info) == 32 and info[8] & 0x40:
+                info[8] &= ~0x40
+                os.setxattr(target, "com.apple.FinderInfo", bytes(info))
+        except OSError as exc:
+            if exc.errno not in (getattr(errno, "ENOATTR", 93), getattr(errno, "ENODATA", 96)):
+                raise
+
+
 def diagnostic_tail(log) -> str:
     """Read only the last few bytes of FFmpeg diagnostics."""
     log.seek(0, 2)
@@ -228,7 +252,7 @@ def process_one(source: Path, target: Path, recipe: Arbeitsrezept, info: VideoKe
             return Laufergebnis(source, target, False, "Canceled")
         if proc.returncode:
             return Laufergebnis(source, target, False, diagnostic_tail(log) or "FFmpeg error")
-        pending.replace(target)
+        publish_output(pending, target)
         progress(1.0)
         return Laufergebnis(source, target, True, "Done")
     except Exception:

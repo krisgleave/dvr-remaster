@@ -13,7 +13,7 @@ DATEIFORMATE = {"mp4-h264": ".mp4", "mp4-hevc": ".mp4", "mov-prores": ".mov",
 # vignette and film grain. See look.py.
 LOOK_WERTE = ("look_farbstimmung", "look_leuchten", "look_farbsaum", "look_vignette", "look_koernung")
 # Fields that recipes saved by older versions lack; they load with their defaults.
-SPAETERE_FELDER = {"aufwand", "dateiformat", "look", *LOOK_WERTE, "osd_handmaske", "output_height", "comparison", "saturation", "remove_audio"}
+SPAETERE_FELDER = {"aufwand", "dateiformat", "look", *LOOK_WERTE, "osd_handmaske", "output_height", "comparison", "saturation", "remove_audio", "preserve_osd", "brightness", "contrast", "gamma", "spatial"}
 
 
 @dataclass(frozen=True)
@@ -46,18 +46,31 @@ class Arbeitsrezept:
 
     output_height: int = 0
     comparison: bool = False
+    # The desktop explicitly opts in (its checkbox is on by default).
+    # Older recipes and callers must retain their original processing semantics.
+    preserve_osd: bool = False
     remove_audio: bool = False
     saturation: float = 1.0
+    brightness: float = 1.0
+    contrast: float = 1.0
+    gamma: float = 1.0
+    spatial: float = 0.0
 
     def validate(self) -> None:
+        if not isinstance(self.preserve_osd, bool):
+            raise ValueError("preserve_osd must be true or false")
         if not isinstance(self.remove_audio, bool):
             raise ValueError("remove_audio must be true or false")
-        if self.output_height not in {0, 720, 1080} or isinstance(self.output_height, bool):
-            raise ValueError("Output height must be 720 or 1080")
+        if type(self.output_height) is not int or not 0 <= self.output_height <= 8192:
+            raise ValueError("Output height must be an integer between 0 and 8192")
         if not isinstance(self.comparison, bool) or (self.comparison and not self.output_height):
             raise ValueError("Comparison requires an output height")
-        if not math.isfinite(self.saturation) or not 1.0 <= self.saturation <= 1.25:
-            raise ValueError("Saturation must be between 1.0 and 1.25")
+        if not math.isfinite(self.saturation) or not 0.0 <= self.saturation <= 2.0:
+            raise ValueError("Saturation must be between 0 and 2")
+        for name, low, high in (("brightness", .5, 1.5), ("contrast", .5, 1.5), ("gamma", .5, 2), ("spatial", 0, 1)):
+            value = getattr(self, name)
+            if not math.isfinite(value) or not low <= value <= high:
+                raise ValueError(f"Invalid {name}")
         if self.signalart not in {"analog", "digital", "neutral"}:
             raise ValueError("Unknown signal profile")
         for name in ("farbberuhigung", "blockpflege", "kantendetail", "bewegungsspur", "rauschminderung"):

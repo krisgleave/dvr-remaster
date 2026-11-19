@@ -1,0 +1,3 @@
+Repository: https://github.com/Microsoft/Microsoft.IO.RecyclableMemoryStream
+Revision: e29a28387da9018fa9605a1dcb3f7a0435aa9974
+Licence path: LICENSE

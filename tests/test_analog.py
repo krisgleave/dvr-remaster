@@ -50,6 +50,15 @@ class AnalogRepairTest(unittest.TestCase):
         after = np.abs(chroma(repaired[4]) - chroma(clean[4]))[band].mean()
         self.assertLess(after, before * 0.4)
 
+    def test_short_white_band_responds_to_strength(self):
+        base = np.full((96, 160, 3), 90, np.uint8)
+        frames = [base.copy() for _ in range(7)]
+        frames[3][40:54] = 245
+        light = list(repair_stream(frames, 25))[3]
+        strong = list(repair_stream(frames, 100))[3]
+        self.assertLess(strong[44:50].mean(), light[44:50].mean() - 30)
+        self.assertLess(np.abs(strong[:20].astype(float) - base[:20]).mean(), 3)
+
     def test_zero_amount_passes_frames_through(self):
         clean = moving_scene(3)
         self.assertTrue(all(a is b for a, b in zip(repair_stream(clean, 0), clean)))

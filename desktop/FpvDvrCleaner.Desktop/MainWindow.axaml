@@ -1,154 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:FpvDvrCleaner.Desktop"
-        x:Class="FpvDvrCleaner.Desktop.MainWindow" Title="DVR Remaster"
-        Icon="avares://FpvDvrCleaner.Desktop/Assets/app.png" Width="1320" Height="880" MinWidth="1080" MinHeight="700"
-        Background="#18191B" WindowStartupLocation="CenterScreen" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged">
-  <Window.Styles>
-    <Style Selector="TextBlock.eyebrow"><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#D78C52"/><Setter Property="LetterSpacing" Value="0.6"/></Style>
-    <Style Selector="TextBlock.heading"><Setter Property="FontSize" Value="20"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="#F2EEE8"/></Style>
-    <Style Selector="TextBlock.note"><Setter Property="Foreground" Value="#B4B0AA"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
-    <Style Selector="TextBlock.label"><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="#C7C2BB"/></Style>
-    <Style Selector="Border.card"><Setter Property="Background" Value="#242426"/><Setter Property="CornerRadius" Value="6"/><Setter Property="Padding" Value="22"/><Setter Property="BorderBrush" Value="#38383B"/><Setter Property="BorderThickness" Value="1"/></Style>
+        x:Class="FpvDvrCleaner.Desktop.MainWindow" Title="DVR Remaster v1.0.0 — by KrisTalksTech"
+        Icon="avares://FpvDvrCleaner.Desktop/Assets/app.png" Width="1320" Height="880" MinWidth="1180" MinHeight="700"
+        Background="#1E1E1E" Focusable="True" WindowStartupLocation="CenterScreen" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged">
 
-    <Style Selector="Button"><Setter Property="Background" Value="#343436"/><Setter Property="Foreground" Value="#F2EEE8"/><Setter Property="Padding" Value="12,6"/><Setter Property="CornerRadius" Value="8"/><Setter Property="FontSize" Value="13"/></Style>
-    <!-- Fluent paints hover and pressed states on the template part, so every
-         state is set there too; otherwise it would fall back to grey on white. -->
-    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#454447"/><Setter Property="Foreground" Value="#F2EEE8"/></Style>
-    <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#535154"/><Setter Property="Foreground" Value="#F2EEE8"/></Style>
-    <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#27272A"/><Setter Property="Foreground" Value="#7D858A"/></Style>
-    <Style Selector="Button.accent"><Setter Property="Background" Value="#D78C52"/><Setter Property="Foreground" Value="#191A1C"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#E69C62"/><Setter Property="Foreground" Value="#191A1C"/></Style>
-    <Style Selector="Button.accent:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#BD7541"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#E3C9B6"/><Setter Property="Foreground" Value="#5E4A3C"/></Style>
-    <Style Selector="Button.dark"><Setter Property="Background" Value="#3A424A"/><Setter Property="Foreground" Value="White"/><Setter Property="Padding" Value="10,5"/></Style>
-    <Style Selector="Button.dark:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#4B545D"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.dark:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#5A646E"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.dark:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#30373E"/><Setter Property="Foreground" Value="#7E878F"/></Style>
-    <Style Selector="Button.step"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#D3D8DC"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,12"/><Setter Property="Margin" Value="0,3"/></Style>
-    <Style Selector="Button.step:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#353C43"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.step:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#4A535C"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.step.current /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#49372B"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.step.current:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#554030"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.row"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/></Style>
-    <!-- Square icon buttons of the queue rows: as tall as Copy and Trim, the vector icon centred exactly.
-         Disabled keeps the same background; only the icon fades (see MainWindow.VectorIcon). -->
-    <Style Selector="Button.square"><Setter Property="Width" Value="30"/><Setter Property="Height" Value="30"/><Setter Property="MinWidth" Value="30"/><Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
-    <Style Selector="Button.square:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#343436"/></Style>
-    <Style Selector="Button.square:disabled Path"><Setter Property="Opacity" Value="0.35"/></Style>
-    <Style Selector="Button.remove"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#9C3F1F"/><Setter Property="FontWeight" Value="Bold"/></Style>
-    <Style Selector="Button.remove:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#F6DED4"/><Setter Property="Foreground" Value="#7A2E14"/></Style>
-
-    <Style Selector="RadioButton.segment">
-      <Setter Property="Foreground" Value="#F2EEE8"/>
-      <Setter Property="Background" Value="#2C2C2F"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border x:Name="Pill" Background="{TemplateBinding Background}" CornerRadius="8" Padding="12,6" Margin="0,0,6,0">
-            <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="RadioButton.segment:pointerover"><Setter Property="Background" Value="#414044"/></Style>
-    <Style Selector="RadioButton.segment:checked"><Setter Property="Background" Value="#D78C52"/><Setter Property="Foreground" Value="#191A1C"/></Style>
-    <Style Selector="RadioButton.segment:checked:pointerover"><Setter Property="Background" Value="#E69C62"/></Style>
-    <!-- Small rounded chips, e.g. the look presets; none is checked for custom values. -->
-    <Style Selector="RadioButton.chip">
-      <Setter Property="Foreground" Value="#F2EEE8"/>
-      <Setter Property="Background" Value="#2C2C2F"/>
-      <Setter Property="FontSize" Value="12"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="11,4" Margin="0,0,6,0">
-            <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="RadioButton.chip:pointerover"><Setter Property="Background" Value="#414044"/></Style>
-    <Style Selector="RadioButton.chip:checked"><Setter Property="Background" Value="#D78C52"/><Setter Property="Foreground" Value="#191A1C"/></Style>
-    <Style Selector="RadioButton.chip:checked:pointerover"><Setter Property="Background" Value="#E69C62"/></Style>
-    <Style Selector="RadioButton.chip:disabled"><Setter Property="Opacity" Value="0.55"/></Style>
-
-    <Style Selector="TextBox"><Setter Property="Background" Value="#242426"/><Setter Property="Foreground" Value="#F2EEE8"/><Setter Property="BorderBrush" Value="#515054"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="9,5"/><Setter Property="FontSize" Value="13"/></Style>
-    <Style Selector="RadioButton.segment"><Setter Property="FontSize" Value="13"/></Style>
-    <Style Selector="TextBox.dark"><Setter Property="Padding" Value="8,3"/><Setter Property="FontSize" Value="12"/><Setter Property="FontFamily" Value="Consolas, Menlo, monospace"/><Setter Property="MinHeight" Value="26"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
-    <Style Selector="Border.card.tight"><Setter Property="Padding" Value="14,10"/></Style>
-    <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement"><Setter Property="Background" Value="#242426"/><Setter Property="BorderBrush" Value="#D78C52"/></Style>
-    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement"><Setter Property="Background" Value="#242426"/><Setter Property="BorderBrush" Value="#D78C52"/></Style>
-    <Style Selector="TextBox /template/ TextBlock#PART_Watermark"><Setter Property="Foreground" Value="#6E767B"/></Style>
-    <Style Selector="CheckBox"><Setter Property="Foreground" Value="#F2EEE8"/></Style>
-    <Style Selector="CheckBox.light"><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.tool"><Setter Property="Background" Value="#2A3138"/><Setter Property="Foreground" Value="#E6EAED"/><Setter Property="Padding" Value="9,4"/><Setter Property="CornerRadius" Value="6"/><Setter Property="FontSize" Value="12"/></Style>
-    <Style Selector="Button.tool:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#3A424A"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.tool:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#4B545D"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="Button.tool:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#23292F"/><Setter Property="Foreground" Value="#6E777F"/></Style>
-    <Style Selector="ToggleButton.tool"><Setter Property="Background" Value="#2A3138"/><Setter Property="Foreground" Value="#E6EAED"/><Setter Property="Padding" Value="9,4"/><Setter Property="CornerRadius" Value="6"/><Setter Property="FontSize" Value="12"/></Style>
-    <Style Selector="ToggleButton.tool:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#3A424A"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="ToggleButton.tool:checked /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#2D9CDB"/><Setter Property="Foreground" Value="White"/></Style>
-    <Style Selector="ToggleButton.tool:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#2487BF"/><Setter Property="Foreground" Value="White"/></Style>
-
-    <!-- Segmented choice: a grey bar, the chosen segment a white pill with orange text.
-         A third segment can be added to any bar without changing its look. -->
-    <Style Selector="Border.segbar"><Setter Property="Background" Value="#2C2C2F"/><Setter Property="CornerRadius" Value="9"/><Setter Property="Padding" Value="2"/><Setter Property="HorizontalAlignment" Value="Left"/></Style>
-    <Style Selector="RadioButton.seg">
-      <Setter Property="Foreground" Value="#C7C2BB"/>
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="FontSize" Value="12"/>
-      <Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border x:Name="SegPill" Background="{TemplateBinding Background}" CornerRadius="7" Padding="11,4">
-            <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="RadioButton.seg:pointerover"><Setter Property="Foreground" Value="#F2EEE8"/></Style>
-    <Style Selector="RadioButton.seg:checked"><Setter Property="Background" Value="#242426"/><Setter Property="Foreground" Value="#D78C52"/></Style>
-    <Style Selector="RadioButton.seg:checked /template/ Border#SegPill"><Setter Property="BoxShadow" Value="0 1 2 0 #26000000"/></Style>
-    <Style Selector="RadioButton.seg:disabled"><Setter Property="Opacity" Value="0.5"/></Style>
-
-    <!-- The user's own presets: rows like radio buttons, with a menu button. -->
-    <Style Selector="Button.presetrow"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="8,5"/><Setter Property="CornerRadius" Value="7"/></Style>
-    <Style Selector="Button.presetrow:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#18191B"/></Style>
-    <Style Selector="Button.presetrow.active /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#382D25"/></Style>
-    <Style Selector="Button.cardmenu"><Setter Property="Width" Value="28"/><Setter Property="Height" Value="26"/><Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="7"/>
-      <Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
-    <Style Selector="Button.cardmenu:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#2C2C2F"/></Style>
-    <Style Selector="TextBlock.cardname"><Setter Property="FontSize" Value="12"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="#F2EEE8"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
-    <Style Selector="TextBlock.cardline"><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="#B4B0AA"/><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="LineHeight" Value="14"/></Style>
-
-    <!-- Small "Show" buttons with an eye, next to each control under Advanced. -->
-    <Style Selector="Button.eye"><Setter Property="Padding" Value="7,2"/><Setter Property="FontSize" Value="11"/><Setter Property="Background" Value="#303033"/><Setter Property="CornerRadius" Value="6"/><Setter Property="MinHeight" Value="20"/></Style>
-    <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#D78C52"/><Setter Property="Padding" Value="4,2"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontSize" Value="12"/></Style>
-    <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#382D25"/><Setter Property="Foreground" Value="#7A3400"/></Style>
-    <Style Selector="TextBlock.rowlabel"><Setter Property="FontSize" Value="12"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="#F2EEE8"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
-    <Style Selector="TextBlock.tech"><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="#7D858A"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
-    <Style Selector="TextBlock.value"><Setter Property="FontSize" Value="12"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="#C7C2BB"/><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="MinWidth" Value="24"/><Setter Property="TextAlignment" Value="Right"/></Style>
-
-    <!-- Export purposes: four cards instead of codec names. -->
-    <Style Selector="RadioButton.purpose">
-      <Setter Property="Background" Value="#242426"/><Setter Property="BorderBrush" Value="#38383B"/><Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="VerticalAlignment" Value="Stretch"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="2" CornerRadius="4" Padding="14,10">
-            <ContentPresenter Content="{TemplateBinding Content}"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="RadioButton.purpose:pointerover"><Setter Property="Background" Value="#303033"/><Setter Property="BorderBrush" Value="#555156"/></Style>
-    <Style Selector="RadioButton.purpose:checked"><Setter Property="Background" Value="#382D25"/><Setter Property="BorderBrush" Value="#D78C52"/></Style>
-    <Style Selector="RadioButton.purpose:disabled"><Setter Property="Opacity" Value="0.55"/></Style>
-    <Style Selector="Border.chip"><Setter Property="Background" Value="#18191B"/><Setter Property="BorderBrush" Value="#38383B"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="10,6"/></Style>
-    <Style Selector="Expander.plain"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="0,8,0,0"/><Setter Property="Margin" Value="-10,0"/></Style>
-    <Style Selector="Expander.plain /template/ ToggleButton#ExpanderHeader"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="10,4"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontSize" Value="13"/></Style>
-    <Style Selector="Expander.plain /template/ ToggleButton#ExpanderHeader /template/ Border#ExpanderHeaderBorder"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
-    <Style Selector="Expander.plain /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ExpanderHeaderBorder"><Setter Property="Background" Value="#18191B"/></Style>
-    <Style Selector="Expander.plain /template/ Border#ExpanderContent"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="10,4,10,0"/></Style>
-  </Window.Styles>
 
   <Window.Resources>
     <!-- One slim slider everywhere: a 3 px track, filled in the accent colour up to a
@@ -158,7 +13,7 @@
       <Setter Property="MinHeight" Value="20"/>
       <Setter Property="Height" Value="20"/>
       <Setter Property="Background" Value="#DCDEDA"/>
-      <Setter Property="Foreground" Value="#D78C52"/>
+      <Setter Property="Foreground" Value="#0A84FF"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="Focusable" Value="True"/>
       <Setter Property="Template">
@@ -190,157 +45,209 @@
           </Grid>
         </ControlTemplate>
       </Setter>
-      <Style Selector="^:pointerover"><Setter Property="Foreground" Value="#E69C62"/></Style>
+      <Style Selector="^:pointerover"><Setter Property="Foreground" Value="#409CFF"/></Style>
       <Style Selector="^:focus-visible /template/ Thumb#thumb"><Setter Property="BorderBrush" Value="#FFD7B8"/></Style>
       <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.45"/></Style>
     </ControlTheme>
   </Window.Resources>
 
-  <Grid RowDefinitions="Auto,*">
-    <Border Background="#191A1C" BorderBrush="#363638" BorderThickness="0,0,0,1" Padding="28,18">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
-        <StackPanel Spacing="3">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Border Width="4" Background="#D78C52" CornerRadius="2"/>
-            <TextBlock x:Name="AppNameLabel" Text="DVR Remaster" FontSize="24" FontWeight="SemiBold" Foreground="#F2EEE8"/>
-          </StackPanel>
-          <TextBlock Text="by KristalksTech  /  Restore and upscale" FontSize="11" Foreground="#AAA6A0" Margin="14,0,0,0"/>
+  <Grid RowDefinitions="0,*">
+    <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto" Margin="12" RowSpacing="8">
+      <Border Classes="card" Padding="10,6" DragDrop.AllowDrop="True" x:Name="TopImport">
+        <Grid ColumnDefinitions="Auto,Auto,260,Auto,*,Auto" ColumnSpacing="6">
+          <Button Content="Open video" Click="Add_Click" Focusable="False"/>
+          <Button Grid.Column="1" Content="New session" Click="NewSession_Click" Focusable="False"/>
+          <Grid Grid.Column="2"><ComboBox x:Name="ClipPicker" MinWidth="180" HorizontalAlignment="Stretch" VerticalAlignment="Center" PlaceholderText="No clip selected" SelectionChanged="ClipPicker_Changed"/></Grid>
+          <StackPanel Grid.Column="3" VerticalAlignment="Center"><TextBlock x:Name="CountLabel" Text="0 clips" Foreground="#0A84FF" FontWeight="SemiBold"/></StackPanel>
+          <Button Grid.Column="5" x:Name="FullScreenButton" Content="Full screen" Click="WorkspaceFullScreen_Click" Focusable="False"/>
+                          <ComboBox x:Name="SimpleSignalChoice" Grid.Column="4" Width="150" HorizontalAlignment="Left" SelectionChanged="SimpleSignal_Changed">
+                  <ComboBoxItem Content="Analogue FPV"/><ComboBoxItem Content="HDZero"/>
+                </ComboBox>
+<StackPanel IsVisible="False"><TextBlock x:Name="AppNameLabel" Text="DVR Remaster" FontSize="18" FontWeight="SemiBold" Foreground="#F2F2F7"/><TextBlock x:Name="PageTitle" Text="Import" FontSize="15" FontWeight="Bold" Foreground="#F2F2F7"/><TextBlock IsVisible="False" x:Name="PageSubtitle" Text="Bring in your DVR recordings." Foreground="#B4B0AA" Margin="0,3,0,0"/></StackPanel>
+                  <StackPanel IsVisible="False" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button x:Name="ImportStep" Focusable="False" Classes="step" Click="ImportStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="Workspace" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="ImportHint" Text="Add recordings" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
+          <Button IsVisible="False" x:Name="TrimStep" Focusable="False" Classes="step" Click="TrimStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="02  Trim" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="TrimHint" Text="Choose your cut" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
+          <Button IsVisible="False" x:Name="CleanStep" Focusable="False" Classes="step" Click="CleanStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="03  Restore" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="CleanHint" Text="Repair settings" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
+          <Button x:Name="ExportStep" Focusable="False" Classes="step" Click="ExportStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="Export" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="ExportHint" Text="Save your video" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
+          <Button x:Name="TrainStep" Focusable="False" IsVisible="False" Click="TrainStep_Click"/>
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <Button x:Name="ImportStep" Classes="step" Click="ImportStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="01  Footage" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="ImportHint" Text="Add recordings" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
-          <Button x:Name="TrimStep" Classes="step" Click="TrimStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="02  Trim" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="TrimHint" Text="Choose your cut" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
-          <Button x:Name="CleanStep" Classes="step" Click="CleanStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="03  Restore" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="CleanHint" Text="Repair settings" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
-          <Button x:Name="ExportStep" Classes="step" Click="ExportStep_Click" MinWidth="130"><StackPanel Spacing="3"><TextBlock Text="04  Export" FontWeight="SemiBold" Foreground="{Binding $parent[Button].Foreground}"/><TextBlock x:Name="ExportHint" Text="Save your video" FontSize="10" Foreground="#AAA6A0"/></StackPanel></Button>
-          <Button x:Name="TrainStep" IsVisible="False" Click="TrainStep_Click"/>
-        </StackPanel>
-      </Grid>
-    </Border>
-    <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto">
-      <!-- Header -->
-      <Border Background="#242426" BorderBrush="#38383B" BorderThickness="0,0,0,1" Padding="28,16">
-        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-          <StackPanel><TextBlock x:Name="PageTitle" Text="Import" FontSize="26" FontWeight="Bold" Foreground="#F2EEE8"/><TextBlock x:Name="PageSubtitle" Text="Bring in your DVR recordings." Foreground="#B4B0AA" Margin="0,3,0,0"/></StackPanel>
-          <ComboBox x:Name="ClipPicker" Grid.Column="1" Width="300" VerticalAlignment="Center" PlaceholderText="No clip selected" SelectionChanged="ClipPicker_Changed"/>
-          <Border Grid.Column="2" Background="#382D25" CornerRadius="14" Padding="12,6" VerticalAlignment="Center"><TextBlock x:Name="CountLabel" Text="0 clips" Foreground="#D78C52" FontWeight="SemiBold"/></Border>
+
         </Grid>
       </Border>
-
       <ScrollViewer Grid.Row="1" x:Name="PageScroller"><Grid x:Name="PageContent" Margin="28,22" MaxWidth="1180">
 
-        <!-- 1 Import -->
-        <StackPanel x:Name="ImportPage" Spacing="16">
-          <Border x:Name="DropZone" Background="#242426" BorderBrush="#705039" BorderThickness="2" CornerRadius="14" Padding="28" DragDrop.AllowDrop="True">
+        <Grid x:Name="Workspace" ColumnDefinitions="*,320" RowDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
+        <Grid x:Name="TrimPage" Grid.Column="0" RowDefinitions="*" Background="#1E1E1E">
+          <Grid ColumnDefinitions="*">
+          <Grid x:Name="PreviewHost" Background="#1E1E1E">
+            <Image x:Name="TrimPreview" Stretch="Uniform" Margin="0"/>
+            <Border Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,20"><TextBlock x:Name="PlayheadLabel" Text="00:00.00" Foreground="White" FontFamily="Consolas, Menlo, monospace" FontWeight="SemiBold"/></Border>
+            <Border x:Name="HoverBadge" IsVisible="False" Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,20"><TextBlock x:Name="HoverLabel" Text="" Foreground="#AEB6BC" FontFamily="Consolas, Menlo, monospace"/></Border>
+            <Border x:Name="TrimLoading" IsVisible="False" Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="24,20"><TextBlock Text="Loading frame&#x2026;" Foreground="White"/></Border>
+          </Grid>
+          <Grid  RowDefinitions="*,Auto" IsVisible="False" x:Name="WorkspaceCompare" RowSpacing="12">
+            <Border Classes="card" Padding="0"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="4">
+              <Grid IsVisible="False" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <StackPanel VerticalAlignment="Center"><TextBlock Text="{x:Static local:UiText.CheckEyebrow}" Classes="eyebrow"/><TextBlock x:Name="PreviewTitle" Text="{x:Static local:UiText.PreviewDefaultTitle}" Classes="heading" FontSize="15" TextTrimming="CharacterEllipsis"/></StackPanel>
+                <Button x:Name="PreviewButton" IsVisible="False" Grid.Column="1" Classes="accent" Content="{x:Static local:UiText.RenderFrame}" Click="Preview_Click" VerticalAlignment="Center"/>
+              </Grid>
+              <Grid x:Name="CompareCanvas" Grid.Row="1" MinHeight="160" Background="#1E1E1E" ClipToBounds="True" SizeChanged="Compare_SizeChanged" PointerPressed="Compare_PointerPressed" PointerMoved="Compare_PointerMoved" PointerReleased="Compare_PointerReleased">
+                <Image x:Name="CompareBefore" Stretch="Uniform"/>
+                <Grid x:Name="CompareAfterClip" ClipToBounds="True"><Image x:Name="CompareAfter" Stretch="Uniform"/></Grid>
+                <Border x:Name="CompareDivider" Width="2" Background="#0A84FF" HorizontalAlignment="Left" IsVisible="False"/>
+                <Border x:Name="CompareGrip" Width="26" Height="26" CornerRadius="13" Background="#0A84FF" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="False" Cursor="SizeWestEast"><TextBlock Text="&#x25C2;&#x25B8;" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                <Border Background="#B0000000" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8"><TextBlock x:Name="CompareLeftLabel" Text="{x:Static local:UiText.LabelOriginal}" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
+                <Border Background="#D0A52B32" CornerRadius="6" Padding="8,3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"><TextBlock x:Name="CompareRightLabel" Text="{x:Static local:UiText.LabelCleaned}" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
+                <ToggleButton x:Name="LookCompare" Classes="tool" Content="Compare without look" IsVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" ToolTip.Tip="Left of the line: the repaired frame without the look instead of the original" IsCheckedChanged="LookCompare_Changed"/>
+                <Border x:Name="RenderBadge" IsVisible="False" Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"><TextBlock Text="{x:Static local:UiText.AutoRendering}" Foreground="White" FontSize="11"/></Border>
+                <TextBlock x:Name="CompareHint" Text="{x:Static local:UiText.PreviewHint}" Foreground="#AEB6BC" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Grid>
+              <Slider x:Name="CompareSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="50" IsVisible="False" ValueChanged="Compare_Changed"/>
+              <TextBlock x:Name="PreviewStatus" Grid.Row="2" Classes="note" FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static local:UiText.PreviewStatusIdle}"/>
+            </Grid></Border>
+
+            <!-- Look: an optional finish, applied after every repair. Switch and styles; the sliders fold out. -->
+            <Border Grid.Row="1" Classes="card" Padding="14,10" IsVisible="False"><StackPanel Spacing="8">
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+                <TextBlock Text="LOOK" Classes="eyebrow" VerticalAlignment="Center"/>
+                <ToggleSwitch x:Name="LookToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Margin="0,-6" VerticalAlignment="Center" ToolTip.Tip="Give the cleaned footage a finished look. Off leaves the picture exactly as repaired." IsCheckedChanged="LookToggle_Changed">
+                  <ToggleSwitch.Resources>
+                    <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#0A84FF"/>
+                    <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#409CFF"/>
+                    <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#0066CC"/>
+                  </ToggleSwitch.Resources>
+                </ToggleSwitch>
+                <WrapPanel x:Name="LookPresets" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" ItemSpacing="0" LineSpacing="4">
+                  <RadioButton Classes="chip" GroupName="look" Content="Off" Tag="off" IsChecked="True" Click="LookPreset_Click"/>
+                  <RadioButton Classes="chip" GroupName="look" Content="Clean" Tag="clean" ToolTip.Tip="A light grade and a hint of vignette" Click="LookPreset_Click"/>
+                  <RadioButton Classes="chip" GroupName="look" Content="Cinematic" Tag="cinematic" ToolTip.Tip="Graded colour, soft glow, darker corners" Click="LookPreset_Click"/>
+                  <RadioButton Classes="chip" GroupName="look" Content="Punchy" Tag="punchy" ToolTip.Tip="Strong contrast and colour, bright glow" Click="LookPreset_Click"/>
+                  <RadioButton Classes="chip" GroupName="look" Content="Retro FPV" Tag="retro-fpv" ToolTip.Tip="Heavy vignette, grain and colour fringes like an old analog feed" Click="LookPreset_Click"/>
+                  <TextBlock x:Name="LookCustom" Text="Custom" IsVisible="False" FontSize="12" FontWeight="SemiBold" Foreground="#0A84FF" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                </WrapPanel>
+                <Button x:Name="LookAdjustButton" Grid.Column="3" Classes="link" Content="{x:Static local:UiText.Adjust}" ToolTip.Tip="Show the five look sliders" Click="LookAdjust_Click"/>
+              </Grid>
+              <Grid x:Name="LookSliders" IsVisible="False" IsEnabled="False" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="18" RowSpacing="6">
+                <StackPanel Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Colour grade" Classes="rowlabel" ToolTip.Tip="contrast, cool shadows, warm light"/><TextBlock Grid.Column="2" x:Name="LookGradeValue" Text="0" Classes="value"/></Grid>
+                  <Slider x:Name="LookGradeSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="contrast, cool shadows, warm light" ValueChanged="LookSlider_Changed"/></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Glow" Classes="rowlabel" ToolTip.Tip="bright parts bloom softly"/><TextBlock Grid.Column="2" x:Name="LookGlowValue" Text="0" Classes="value"/></Grid>
+                  <Slider x:Name="LookGlowSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="bright parts bloom softly" ValueChanged="LookSlider_Changed"/></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Vignette" Classes="rowlabel" ToolTip.Tip="darker corners"/><TextBlock Grid.Column="2" x:Name="LookVignetteValue" Text="0" Classes="value"/></Grid>
+                  <Slider x:Name="LookVignetteSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="darker corners" ValueChanged="LookSlider_Changed"/></StackPanel>
+                <StackPanel Grid.Row="1" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Film grain" Classes="rowlabel" ToolTip.Tip="fine noise like film"/><TextBlock Grid.Column="2" x:Name="LookGrainValue" Text="0" Classes="value"/></Grid>
+                  <Slider x:Name="LookGrainSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="fine noise like film" ValueChanged="LookSlider_Changed"/></StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Lens fringe" Classes="rowlabel" ToolTip.Tip="colour seams towards the edges"/><TextBlock Grid.Column="2" x:Name="LookFringeValue" Text="0" Classes="value"/></Grid>
+                  <Slider x:Name="LookFringeSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="colour seams towards the edges" ValueChanged="LookSlider_Changed"/></StackPanel>
+                <TextBlock Grid.Row="1" Grid.Column="2" Classes="note" FontSize="11" VerticalAlignment="Center" Text="Applied last, after every repair."/>
+              </Grid>
+            </StackPanel></Border>
+          </Grid>
+          </Grid>
+        </Grid>
+          <Grid Grid.Row="1" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Background="#28282A">
+          <Border Grid.Row="1" Margin="8,4,8,0">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button x:Name="OriginalView" Classes="accent" MinWidth="90" Content="Original" Click="WorkspaceOriginal_Click" Focusable="False"/><Button x:Name="CompareView" MinWidth="90" Content="Compare" Click="WorkspaceCompare_Click" Focusable="False"/><Button x:Name="PlayButton" Classes="accent square" Content="&#x25B6;" Focusable="False" ToolTip.Tip="Play / pause (Space)" Click="Play_Click"/>
+                <Button Classes="accent square" Focusable="False" ToolTip.Tip="Set in point (I)" Click="MarkIn_Click"><Path Data="M12,2 L6,2 Q4,2 4,4 L4,14 Q4,16 6,16 L12,16" Stroke="White" StrokeThickness="2"/></Button>
+                <Button Classes="accent square" Focusable="False" ToolTip.Tip="Set out point (O)" Click="MarkOut_Click"><Path Data="M4,2 L10,2 Q12,2 12,4 L12,14 Q12,16 10,16 L4,16" Stroke="White" StrokeThickness="2"/></Button>
+              </StackPanel>
+              <TextBlock x:Name="CutSummary" Grid.Column="1" Foreground="#A8D2FF" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"><Button Classes="tool" Content="Clear trim" ToolTip.Tip="Select entire clip (Alt+X)" Click="ResetCut_Click"/></StackPanel>
+              <StackPanel IsVisible="False">
+                <ToggleButton x:Name="SnapToggle" IsChecked="False" IsCheckedChanged="Snap_Changed"/>
+                <Slider x:Name="ZoomSlider" Minimum="1" Maximum="60" Value="1" ValueChanged="Zoom_Changed"/>
+                <Button x:Name="UndoButton"/><Button x:Name="RedoButton"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <ScrollViewer Grid.Row="3" x:Name="StripScroller" Margin="8,4,8,0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" SizeChanged="Strip_SizeChanged">
+            <local:TimelineView x:Name="Timeline"/>
+          </ScrollViewer>
+          <Grid Grid.Row="4" Margin="8,2,8,4">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+              <TextBlock x:Name="SegmentLabel" Text="IN" Foreground="#AEB6BC" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBox x:Name="InBox" Grid.Column="1" Width="96" Classes="dark" LostFocus="CutBox_Changed" KeyDown="CutBox_KeyDown"/>
+              <TextBlock Grid.Column="2" Text="OUT" Foreground="#AEB6BC" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBox x:Name="OutBox" Grid.Column="3" Width="96" Classes="dark" LostFocus="CutBox_Changed" KeyDown="CutBox_KeyDown"/>
+              <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="10,0,0,0">
+                <TextBlock x:Name="KeptLabel" Text="&#x2014;" Foreground="#A8D2FF" FontSize="12" FontWeight="SemiBold"/>
+                <TextBlock x:Name="PartsLabel" Text="" Foreground="#AEB6BC" FontSize="12"/>
+              </StackPanel>
+              <TextBlock x:Name="StripStatus" Grid.Column="5" Text="Choose a clip to build its filmstrip." Foreground="#AEB6BC" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="12,0"/>
+
+            </Grid>
+          </Grid>
+                  </Grid>
+          <Border Grid.Column="1" Classes="card" Padding="0">
+            <ScrollViewer x:Name="SettingsScroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="12,10" Spacing="6">
+                <StackPanel x:Name="ImportPage" Spacing="8">
+          <Border IsVisible="False" x:Name="DropZone" Background="#28282A" BorderBrush="#345477" BorderThickness="2" CornerRadius="14" Padding="10" DragDrop.AllowDrop="True">
             <StackPanel Spacing="10" HorizontalAlignment="Center">
-              <TextBlock Text="Drop DVR recordings here" FontSize="20" FontWeight="SemiBold" Foreground="#F2EEE8" HorizontalAlignment="Center"/>
-              <TextBlock Text=".ts .mp4 .mov .mkv .avi .m4v .webm from analog or HDZero goggles and receivers" Classes="note" HorizontalAlignment="Center"/>
-              <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,6,0,0">
-                <Button Classes="accent" Content="Browse files" Click="Add_Click"/>
-                <Button Content="Add a whole folder" Click="AddFolder_Click"/>
+              <TextBlock Text="Footage" FontSize="13" FontWeight="SemiBold" Foreground="#F2F2F7" HorizontalAlignment="Center"/>
+              <TextBlock Text=".ts .mp4 .mov .mkv .avi .m4v .webm from analog or HDZero goggles and receivers" Classes="note" HorizontalAlignment="Center" IsVisible="False"/>
+              <StackPanel Orientation="Vertical" Spacing="10" HorizontalAlignment="Center" Margin="0,6,0,0">
+                <Button Classes="accent" Content="Open video" Click="Add_Click"/>
+
               </StackPanel>
             </StackPanel>
           </Border>
-          <Border Classes="card"><StackPanel Spacing="10">
+          <Border IsVisible="False" Classes="card" Padding="8"><StackPanel Spacing="4">
             <TextBlock Text="QUEUE" Classes="eyebrow"/>
             <TextBlock x:Name="QueueEmpty" Text="Nothing here yet. Every clip you add keeps its own cut and is exported with the same cleaning settings." Classes="note"/>
             <StackPanel x:Name="QueueList" Spacing="6"/>
             <TextBlock x:Name="ImportStatus" Text="" Classes="note"/>
           </StackPanel></Border>
+          <Border Classes="card" Padding="8" Margin="0,4,0,0">
+            <StackPanel Spacing="4">
+              <TextBlock Text="SOURCE INFORMATION" Classes="eyebrow"/>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <TextBlock x:Name="SourceLabels" IsVisible="False" Text="Resolution&#10;Aspect ratio&#10;Frame rate&#10;Video bitrate&#10;File size&#10;Duration" Foreground="#AEB6BC" FontSize="11" LineHeight="18"/>
+                <TextBlock Grid.Column="1" x:Name="SourceDetails" Text="Select a recording" Foreground="#E0E0E0" FontSize="11" LineHeight="18" TextAlignment="Right"/>
+              </Grid>
+            </StackPanel>
+          </Border>
         </StackPanel>
-
-        <!-- 2 Trim: a full-bleed dark workspace, the preview takes every spare pixel -->
-        <Grid x:Name="TrimPage" IsVisible="False" RowDefinitions="*,Auto,Auto,Auto,Auto" Background="#1B2025">
-          <Grid x:Name="PreviewHost" Background="#101418">
-            <Image x:Name="TrimPreview" Stretch="Uniform" Margin="16,12"/>
-            <Border Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,20"><TextBlock x:Name="PlayheadLabel" Text="00:00.00" Foreground="White" FontFamily="Consolas, Menlo, monospace" FontWeight="SemiBold"/></Border>
-            <Border x:Name="HoverBadge" IsVisible="False" Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,20"><TextBlock x:Name="HoverLabel" Text="" Foreground="#AEB6BC" FontFamily="Consolas, Menlo, monospace"/></Border>
-            <Border x:Name="TrimLoading" IsVisible="False" Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="24,20"><TextBlock Text="Loading frame&#x2026;" Foreground="White"/></Border>
-          </Grid>
-          <Border Grid.Row="1" Margin="16,10,16,0">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Classes="dark" MinWidth="38" MinHeight="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Go to start (Home)" Click="GoStart_Click"><Path Data="M0,0 H1.8 V10 H0 Z M7.2,0 V10 L1.8,5 Z M12.6,0 V10 L7.2,5 Z" Width="12.6" Height="10" Fill="{Binding $parent[Button].Foreground}" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>
-                <Button Classes="dark" MinWidth="44" MinHeight="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Previous cut edge or bookmark (Page Up)" Click="PrevEdge_Click"><Path Data="M6.5,0 V10 L0,5 Z M13,0 V10 L6.5,5 Z" Width="13" Height="10" Fill="{Binding $parent[Button].Foreground}" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>
-                <Button Classes="dark" Content="&#x2212;1 s" ToolTip.Tip="Back one second (Left; Shift: 5 s)" Click="Back_Click"/>
-                <Button x:Name="PlayButton" Classes="dark" Content="&#x25B6; Play" MinWidth="92" ToolTip.Tip="Quick play through the kept parts (Space)" Click="Play_Click"/>
-                <Button Classes="dark" Content="+1 s" ToolTip.Tip="Forward one second (Right; Shift: 5 s)" Click="Forward_Click"/>
-                <Button Classes="dark" MinWidth="44" MinHeight="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Next cut edge or bookmark (Page Down)" Click="NextEdge_Click"><Path Data="M0,0 V10 L6.5,5 Z M6.5,0 V10 L13,5 Z" Width="13" Height="10" Fill="{Binding $parent[Button].Foreground}" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>
-                <Button Classes="dark" MinWidth="38" MinHeight="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Go to end (End)" Click="GoEnd_Click"><Path Data="M0,0 V10 L5.4,5 Z M5.4,0 V10 L10.8,5 Z M10.8,0 H12.6 V10 H10.8 Z" Width="12.6" Height="10" Fill="{Binding $parent[Button].Foreground}" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>
-              </StackPanel>
-              <TextBlock x:Name="CutSummary" Grid.Column="1" Text="" Foreground="#FFC08E" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                <ToggleButton x:Name="SnapToggle" Classes="tool" Content="Snap" IsChecked="True" ToolTip.Tip="Snap to cut edges, bookmarks and the ruler while dragging" IsCheckedChanged="Snap_Changed"/>
-                <Button Classes="tool" Width="30" Height="28" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Zoom out (-)" Click="ZoomOut_Click"><Path Data="M0,5 L10,5" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.8" StrokeLineCap="Round" Width="10" Height="10" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>
-                <Slider x:Name="ZoomSlider" Width="110" Minimum="1" Maximum="60" Value="1" VerticalAlignment="Center" ValueChanged="Zoom_Changed"/>
-                <Button Classes="tool" Width="30" Height="28" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Zoom in (+, or Ctrl + mouse wheel)" Click="ZoomIn_Click"><Path Data="M0,5 L10,5 M5,0 L5,10" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.8" StrokeLineCap="Round" Width="10" Height="10" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"/></Button>
-                <Button Classes="tool" Content="Fit" ToolTip.Tip="Show the whole clip" Click="ZoomFit_Click"/>
-              </StackPanel>
-            </Grid>
-          </Border>
-          <Border Grid.Row="2" Margin="16,8,16,0">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Classes="tool" Content="[ Start here" ToolTip.Tip="The current part starts at the playhead (I)" Click="MarkIn_Click"/>
-                <Button Classes="tool" Content="End here ]" ToolTip.Tip="The current part ends at the playhead (O)" Click="MarkOut_Click"/>
-                <Button Classes="tool" Content="&#x2702; Split" ToolTip.Tip="Split the part at the playhead into two (S)" Click="Split_Click"/>
-                <Button Classes="tool" Content="Remove part" ToolTip.Tip="Remove the part under the playhead (Delete)" Click="DeleteSegment_Click"/>
-                <Border Width="1" Background="#3A424A" Margin="6,4"/>
-                <Button Classes="tool" Content="Bookmark" ToolTip.Tip="Set or remove a bookmark at the playhead (B)" Click="Bookmark_Click"/>
-                <Border Width="1" Background="#3A424A" Margin="6,4"/>
-                <Button x:Name="UndoButton" Classes="tool" Content="Undo" ToolTip.Tip="Undo (Ctrl+Z)" Click="Undo_Click" IsEnabled="False"/>
-                <Button x:Name="RedoButton" Classes="tool" Content="Redo" ToolTip.Tip="Redo (Ctrl+Y)" Click="Redo_Click" IsEnabled="False"/>
-              </StackPanel>
-              <Button Grid.Column="2" Classes="tool" Content="Keep whole clip" ToolTip.Tip="Keep everything again" Click="ResetCut_Click"/>
-            </Grid>
-          </Border>
-          <ScrollViewer Grid.Row="3" x:Name="StripScroller" Margin="16,10,16,0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" SizeChanged="Strip_SizeChanged">
-            <local:TimelineView x:Name="Timeline"/>
-          </ScrollViewer>
-          <Grid Grid.Row="4" Margin="16,6,16,10">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
-              <TextBlock x:Name="SegmentLabel" Text="START" Foreground="#AEB6BC" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
-              <TextBox x:Name="InBox" Grid.Column="1" Width="96" Classes="dark" LostFocus="CutBox_Changed" KeyDown="CutBox_KeyDown"/>
-              <TextBlock Grid.Column="2" Text="END" Foreground="#AEB6BC" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
-              <TextBox x:Name="OutBox" Grid.Column="3" Width="96" Classes="dark" LostFocus="CutBox_Changed" KeyDown="CutBox_KeyDown"/>
-              <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="10,0,0,0">
-                <TextBlock x:Name="KeptLabel" Text="&#x2014;" Foreground="#FFC08E" FontSize="12" FontWeight="SemiBold"/>
-                <TextBlock x:Name="PartsLabel" Text="" Foreground="#AEB6BC" FontSize="12"/>
-              </StackPanel>
-              <TextBlock x:Name="StripStatus" Grid.Column="5" Text="Choose a clip to build its filmstrip." Foreground="#AEB6BC" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="12,0"/>
-              <Border Grid.Column="6" Background="#2A3138" CornerRadius="6" Padding="8,3" VerticalAlignment="Center"
-                      ToolTip.Tip="Space play &#x00B7; &#x2190; &#x2192; 1 s (Shift 5 s) &#x00B7; I / O start and end here &#x00B7; S split &#x00B7; Delete remove part &#x00B7; B bookmark &#x00B7; Ctrl+Z / Ctrl+Y undo and redo &#x00B7; + &#x2212; zoom, Ctrl+wheel zooms, wheel scrolls &#x00B7; Page Up / Down next cut &#x00B7; F11 full screen">
-                <TextBlock Text="Keys ?" Foreground="#AEB6BC" FontSize="11"/>
-              </Border>
-            </Grid>
-          </Grid>
-        </Grid>
-
-        <!-- 3 Repair: two simple questions on the left, the big check on the right.
-             Everything else waits under Advanced. Nothing scrolls sideways. -->
-        <Grid x:Name="CleanPage" IsVisible="False" ColumnDefinitions="*,320" ColumnSpacing="12">
-          <Border Grid.Column="1" Classes="card" Padding="0">
-            <ScrollViewer x:Name="SettingsScroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="16,12,16,12" Spacing="11">
-                <TextBlock Text="PICTURE RESTORATION" Classes="eyebrow"/>
-                <TextBlock Text="Repair strength" Classes="heading" FontSize="20"/>
-                <TextBlock Text="Choose a starting point. Compare a frame before exporting." Classes="note"/>
-                <TextBlock Text="Recording type" Classes="rowlabel" Margin="0,12,0,0"/>
-                <ComboBox x:Name="SimpleSignalChoice" HorizontalAlignment="Stretch" SelectionChanged="SimpleSignal_Changed">
-                  <ComboBoxItem Content="Analogue FPV"/><ComboBoxItem Content="HDZero"/>
-                </ComboBox>
-                <TextBlock Text="Preset" Classes="rowlabel" Margin="0,10,0,0"/>
-                <ComboBox x:Name="SimplePresetChoice" HorizontalAlignment="Stretch" SelectionChanged="SimplePreset_Changed">
-                  <ComboBoxItem Content="1 · Light"/><ComboBoxItem Content="2 · Balanced"/><ComboBoxItem Content="3 · Strong"/>
-                </ComboBox>
-                <TextBlock x:Name="SimplePresetNote" Classes="note" MinHeight="60"/>
-                <Border Height="1" Background="#D8DDE0" Margin="0,8"/>
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="Saturation" Classes="rowlabel"/>
-                  <TextBlock x:Name="SaturationValue" Grid.Column="1" Text="100%" Classes="value"/>
+                <Border Classes="card" Padding="8" Margin="0,4,0,0"><StackPanel Spacing="10">
+                <TextBlock Text="RESTORE STRENGTH" Classes="eyebrow"/>
+                <StackPanel Spacing="6">
+                  <ComboBox x:Name="SimplePresetChoice" HorizontalAlignment="Stretch" SelectionChanged="SimplePreset_Changed"/>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                  <Button Classes="compact" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Save as…" Click="SaveAdvancedPreset_Click"/>
+                  <Button Grid.Column="1" Classes="compact" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="Manage" Click="ManageAdvancedPreset_Click"/>
+                </Grid></StackPanel>
+                <TextBlock x:Name="SimplePresetNote" IsVisible="False"/>
+                </StackPanel></Border>
+                <Border Classes="card" Padding="8" Margin="0,4,0,0"><StackPanel Spacing="12">
+                <TextBlock Text="ADJUSTMENTS" Classes="eyebrow"/>
+                <Grid ColumnDefinitions="88,*,38,Auto,18" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="4" RowSpacing="8">
+                  <TextBlock Grid.Row="0" Text="Repair strength" FontSize="11" VerticalAlignment="Center"/>
+                  <Grid Grid.Row="0" Grid.Column="1"><Slider x:Name="InterferenceControl" Background="#808080" Minimum="0" Maximum="100" Value="60" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="InlineRepair_Changed"/><local:PresetMarker x:Name="Marker0" IsHitTestVisible="False"/></Grid>
+                  <TextBox Grid.Row="0" Grid.Column="2" x:Name="InterferenceReadout" Tag="0" Width="38" MinWidth="0" MinHeight="24" Padding="3,2" FontSize="11" TextAlignment="Center" VerticalAlignment="Center" LostFocus="AdjustmentValue_LostFocus" KeyDown="AdjustmentValue_KeyDown"/>
+                  <TextBlock Grid.Row="0" Grid.Column="3" Text="%" FontSize="11" VerticalAlignment="Center"/>
+                  <Button Grid.Row="0" Grid.Column="4" Classes="link" Tag="0" Padding="2" Click="ResetAdjustment_Click" ToolTip.Tip="Reset to preset"><Path Data="M3,5 L3,1 M3,5 L7,5 M3,5 A5,5 0 1 1 3,10" Stroke="#0A84FF" StrokeThickness="1.4" Width="14" Height="14" Stretch="Uniform"/></Button>
+                  <TextBlock Grid.Row="1" Text="Sharpness" FontSize="11" VerticalAlignment="Center"/>
+                  <Grid Grid.Row="1" Grid.Column="1"><Slider x:Name="SharpnessControl" Background="#808080" Minimum="0" Maximum="100" Value="15" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="InlineRepair_Changed"/><local:PresetMarker x:Name="Marker1" IsHitTestVisible="False"/></Grid>
+                  <TextBox Grid.Row="1" Grid.Column="2" x:Name="SharpnessReadout" Tag="1" Width="38" MinWidth="0" MinHeight="24" Padding="3,2" FontSize="11" TextAlignment="Center" VerticalAlignment="Center" LostFocus="AdjustmentValue_LostFocus" KeyDown="AdjustmentValue_KeyDown"/>
+                  <TextBlock Grid.Row="1" Grid.Column="3" Text="%" FontSize="11" VerticalAlignment="Center"/>
+                  <Button Grid.Row="1" Grid.Column="4" Classes="link" Tag="1" Padding="2" Click="ResetAdjustment_Click" ToolTip.Tip="Reset to preset"><Path Data="M3,5 L3,1 M3,5 L7,5 M3,5 A5,5 0 1 1 3,10" Stroke="#0A84FF" StrokeThickness="1.4" Width="14" Height="14" Stretch="Uniform"/></Button>
+                  <TextBlock Grid.Row="2" Text="Saturation" FontSize="11" VerticalAlignment="Center"/>
+                  <Grid Grid.Row="2" Grid.Column="1"><Slider x:Name="InlineSaturationControl" Background="#808080" Minimum="0" Maximum="200" Value="100" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="InlineRepair_Changed"/><local:PresetMarker x:Name="Marker2" IsHitTestVisible="False"/></Grid>
+                  <TextBox Grid.Row="2" Grid.Column="2" x:Name="InlineSaturationReadout" Tag="2" Width="38" MinWidth="0" MinHeight="24" Padding="3,2" FontSize="11" TextAlignment="Center" VerticalAlignment="Center" LostFocus="AdjustmentValue_LostFocus" KeyDown="AdjustmentValue_KeyDown"/>
+                  <TextBlock Grid.Row="2" Grid.Column="3" Text="%" FontSize="11" VerticalAlignment="Center"/>
+                  <Button Grid.Row="2" Grid.Column="4" Classes="link" Tag="2" Padding="2" Click="ResetAdjustment_Click" ToolTip.Tip="Reset to preset"><Path Data="M3,5 L3,1 M3,5 L7,5 M3,5 A5,5 0 1 1 3,10" Stroke="#0A84FF" StrokeThickness="1.4" Width="14" Height="14" Stretch="Uniform"/></Button>
+                  <TextBlock Grid.Row="3" Text="Contrast" FontSize="11" VerticalAlignment="Center"/>
+                  <Grid Grid.Row="3" Grid.Column="1"><Slider x:Name="InlineContrastControl" Background="#808080" Minimum="50" Maximum="150" Value="100" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="InlineRepair_Changed"/><local:PresetMarker x:Name="Marker3" IsHitTestVisible="False"/></Grid>
+                  <TextBox Grid.Row="3" Grid.Column="2" x:Name="InlineContrastReadout" Tag="3" Width="38" MinWidth="0" MinHeight="24" Padding="3,2" FontSize="11" TextAlignment="Center" VerticalAlignment="Center" LostFocus="AdjustmentValue_LostFocus" KeyDown="AdjustmentValue_KeyDown"/>
+                  <TextBlock Grid.Row="3" Grid.Column="3" Text="%" FontSize="11" VerticalAlignment="Center"/>
+                  <Button Grid.Row="3" Grid.Column="4" Classes="link" Tag="3" Padding="2" Click="ResetAdjustment_Click" ToolTip.Tip="Reset to preset"><Path Data="M3,5 L3,1 M3,5 L7,5 M3,5 A5,5 0 1 1 3,10" Stroke="#0A84FF" StrokeThickness="1.4" Width="14" Height="14" Stretch="Uniform"/></Button>
                 </Grid>
-                <Slider x:Name="SaturationSlider" Minimum="100" Maximum="125" Value="100" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Saturation_Changed"/>
-                <TextBlock Text="100% leaves colour unchanged. A small increase adds colour without grain, glow or other effects." Classes="note"/>
-                <CheckBox x:Name="SimpleRemoveOsd" Content="Remove on-screen text (OSD)" IsCheckedChanged="SimpleOsd_Changed" Margin="0,12,0,0"/>
-                <TextBlock Text="Leave off to preserve flight information." Classes="note"/>
+                <StackPanel IsVisible="False"><TextBlock x:Name="SaturationValue"/><Slider x:Name="SaturationSlider" Minimum="0" Maximum="200" Value="100" ValueChanged="Saturation_Changed"/></StackPanel>
+                <Border Height="1" Background="#414143"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="4"><CheckBox x:Name="PreserveOsd" FontSize="11" Content="Preserve OSD" IsChecked="True" IsCheckedChanged="OsdProtection_Changed"/><CheckBox Grid.Column="1" x:Name="ShowOsdMask" FontSize="11" Content="Show mask" IsVisible="False" IsCheckedChanged="OsdProtection_Changed"/><Button Grid.Column="1" Classes="link" Content="Reset all" Click="ResetAdjustments_Click"/></Grid>
+                </StackPanel></Border>
+                <CheckBox x:Name="SimpleRemoveOsd" IsVisible="False" Content="Remove on-screen text (OSD)" IsCheckedChanged="SimpleOsd_Changed" Margin="0,4,0,0"/>
+                <TextBlock Text="Leave off to preserve flight information." IsVisible="False" Classes="note"/>
                 <StackPanel IsVisible="False">
 
                 <StackPanel Spacing="1">
@@ -372,9 +279,9 @@
                   <TextBlock Text="{x:Static local:UiText.BestLabel}" Classes="rowlabel"/>
                   <ToggleSwitch x:Name="BestToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Margin="0,-6" VerticalAlignment="Center" IsCheckedChanged="Best_Changed">
                     <ToggleSwitch.Resources>
-                      <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#D78C52"/>
-                      <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#E69C62"/>
-                      <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#BD7541"/>
+                      <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#0A84FF"/>
+                      <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#409CFF"/>
+                      <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#0066CC"/>
                     </ToggleSwitch.Resources>
                   </ToggleSwitch>
                   <TextBlock Grid.Column="2" Classes="tech" Margin="2,0,0,0" Text="{x:Static local:UiText.BestDetail}"/>
@@ -498,105 +405,46 @@
             </ScrollViewer>
           </Border>
 
-          <Grid Grid.Column="0" RowDefinitions="*,Auto" RowSpacing="12">
-            <Border Classes="card" Padding="14,10"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <StackPanel VerticalAlignment="Center"><TextBlock Text="{x:Static local:UiText.CheckEyebrow}" Classes="eyebrow"/><TextBlock x:Name="PreviewTitle" Text="{x:Static local:UiText.PreviewDefaultTitle}" Classes="heading" FontSize="15" TextTrimming="CharacterEllipsis"/></StackPanel>
-                <Button x:Name="PreviewButton" Grid.Column="1" Classes="accent" Content="{x:Static local:UiText.RenderFrame}" Click="Preview_Click" VerticalAlignment="Center"/>
-              </Grid>
-              <Grid x:Name="CompareCanvas" Grid.Row="1" MinHeight="160" Background="#1B2025" ClipToBounds="True" SizeChanged="Compare_SizeChanged" PointerPressed="Compare_PointerPressed" PointerMoved="Compare_PointerMoved" PointerReleased="Compare_PointerReleased">
-                <Image x:Name="CompareBefore" Stretch="Uniform"/>
-                <Image x:Name="CompareAfter" Stretch="Uniform"/>
-                <Border x:Name="CompareDivider" Width="2" Background="#D78C52" HorizontalAlignment="Left" IsVisible="False"/>
-                <Border x:Name="CompareGrip" Width="26" Height="26" CornerRadius="13" Background="#D78C52" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="False" Cursor="SizeWestEast"><TextBlock Text="&#x25C2;&#x25B8;" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                <Border Background="#B0000000" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8"><TextBlock x:Name="CompareLeftLabel" Text="{x:Static local:UiText.LabelOriginal}" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
-                <Border Background="#B0705039" CornerRadius="6" Padding="8,3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"><TextBlock x:Name="CompareRightLabel" Text="{x:Static local:UiText.LabelCleaned}" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
-                <ToggleButton x:Name="LookCompare" Classes="tool" Content="Compare without look" IsVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" ToolTip.Tip="Left of the line: the repaired frame without the look instead of the original" IsCheckedChanged="LookCompare_Changed"/>
-                <Border x:Name="RenderBadge" IsVisible="False" Background="#B0000000" CornerRadius="6" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"><TextBlock Text="{x:Static local:UiText.AutoRendering}" Foreground="White" FontSize="11"/></Border>
-                <TextBlock x:Name="CompareHint" Text="{x:Static local:UiText.PreviewHint}" Foreground="#AEB6BC" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              </Grid>
-              <Slider x:Name="CompareSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="50" IsVisible="False" ValueChanged="Compare_Changed"/>
-              <TextBlock x:Name="PreviewStatus" Grid.Row="2" Classes="note" FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static local:UiText.PreviewStatusIdle}"/>
-            </Grid></Border>
-
-            <!-- Look: an optional finish, applied after every repair. Switch and styles; the sliders fold out. -->
-            <Border Grid.Row="1" Classes="card" Padding="14,10" IsVisible="False"><StackPanel Spacing="8">
-              <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
-                <TextBlock Text="LOOK" Classes="eyebrow" VerticalAlignment="Center"/>
-                <ToggleSwitch x:Name="LookToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Margin="0,-6" VerticalAlignment="Center" ToolTip.Tip="Give the cleaned footage a finished look. Off leaves the picture exactly as repaired." IsCheckedChanged="LookToggle_Changed">
-                  <ToggleSwitch.Resources>
-                    <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#D78C52"/>
-                    <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#E69C62"/>
-                    <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#BD7541"/>
-                  </ToggleSwitch.Resources>
-                </ToggleSwitch>
-                <WrapPanel x:Name="LookPresets" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" ItemSpacing="0" LineSpacing="4">
-                  <RadioButton Classes="chip" GroupName="look" Content="Off" Tag="off" IsChecked="True" Click="LookPreset_Click"/>
-                  <RadioButton Classes="chip" GroupName="look" Content="Clean" Tag="clean" ToolTip.Tip="A light grade and a hint of vignette" Click="LookPreset_Click"/>
-                  <RadioButton Classes="chip" GroupName="look" Content="Cinematic" Tag="cinematic" ToolTip.Tip="Graded colour, soft glow, darker corners" Click="LookPreset_Click"/>
-                  <RadioButton Classes="chip" GroupName="look" Content="Punchy" Tag="punchy" ToolTip.Tip="Strong contrast and colour, bright glow" Click="LookPreset_Click"/>
-                  <RadioButton Classes="chip" GroupName="look" Content="Retro FPV" Tag="retro-fpv" ToolTip.Tip="Heavy vignette, grain and colour fringes like an old analog feed" Click="LookPreset_Click"/>
-                  <TextBlock x:Name="LookCustom" Text="Custom" IsVisible="False" FontSize="12" FontWeight="SemiBold" Foreground="#D78C52" VerticalAlignment="Center" Margin="2,0,0,0"/>
-                </WrapPanel>
-                <Button x:Name="LookAdjustButton" Grid.Column="3" Classes="link" Content="{x:Static local:UiText.Adjust}" ToolTip.Tip="Show the five look sliders" Click="LookAdjust_Click"/>
-              </Grid>
-              <Grid x:Name="LookSliders" IsVisible="False" IsEnabled="False" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="18" RowSpacing="6">
-                <StackPanel Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Colour grade" Classes="rowlabel" ToolTip.Tip="contrast, cool shadows, warm light"/><TextBlock Grid.Column="2" x:Name="LookGradeValue" Text="0" Classes="value"/></Grid>
-                  <Slider x:Name="LookGradeSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="contrast, cool shadows, warm light" ValueChanged="LookSlider_Changed"/></StackPanel>
-                <StackPanel Grid.Column="1" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Glow" Classes="rowlabel" ToolTip.Tip="bright parts bloom softly"/><TextBlock Grid.Column="2" x:Name="LookGlowValue" Text="0" Classes="value"/></Grid>
-                  <Slider x:Name="LookGlowSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="bright parts bloom softly" ValueChanged="LookSlider_Changed"/></StackPanel>
-                <StackPanel Grid.Column="2" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Vignette" Classes="rowlabel" ToolTip.Tip="darker corners"/><TextBlock Grid.Column="2" x:Name="LookVignetteValue" Text="0" Classes="value"/></Grid>
-                  <Slider x:Name="LookVignetteSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="darker corners" ValueChanged="LookSlider_Changed"/></StackPanel>
-                <StackPanel Grid.Row="1" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Film grain" Classes="rowlabel" ToolTip.Tip="fine noise like film"/><TextBlock Grid.Column="2" x:Name="LookGrainValue" Text="0" Classes="value"/></Grid>
-                  <Slider x:Name="LookGrainSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="fine noise like film" ValueChanged="LookSlider_Changed"/></StackPanel>
-                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="1"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6"><TextBlock Text="Lens fringe" Classes="rowlabel" ToolTip.Tip="colour seams towards the edges"/><TextBlock Grid.Column="2" x:Name="LookFringeValue" Text="0" Classes="value"/></Grid>
-                  <Slider x:Name="LookFringeSlider" Minimum="0" Maximum="100" Value="0" ToolTip.Tip="colour seams towards the edges" ValueChanged="LookSlider_Changed"/></StackPanel>
-                <TextBlock Grid.Row="1" Grid.Column="2" Classes="note" FontSize="11" VerticalAlignment="Center" Text="Applied last, after every repair."/>
-              </Grid>
-            </StackPanel></Border>
-          </Grid>
+          <Grid x:Name="CleanPage" IsVisible="False"/>
         </Grid>
 
         <!-- 4 Export: where, what for, and one big button. The rest waits under More options. -->
-        <Grid x:Name="ExportPage" IsVisible="False" RowDefinitions="Auto,*" RowSpacing="12">
-          <Border Classes="card" Padding="20,14"><StackPanel Spacing="12">
+        <!-- Model training -->
+        <StackPanel x:Name="TrainPage" IsVisible="False" Spacing="14"><Border Classes="card"><StackPanel Spacing="12">
+          <TextBlock Text="OPTIONAL" Classes="eyebrow"/>
+          <TextBlock Text="Train a small model on your own footage" Classes="heading"/>
+          <TextBlock Classes="note" Text="Not needed for cleaning. A tiny self-supervised network learns your receiver's typical pixel statistics from damaged recordings; select it later under Repair &#x2192; Advanced."/>
+          <TextBlock Text="RECORDINGS FOLDER" Classes="label"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="TrainFolder" PlaceholderText="Folder with recordings"/><Button Grid.Column="1" Content="Choose folder" Click="TrainFolder_Click"/></Grid>
+          <TextBlock Text="SIGNAL" Classes="label"/>
+          <ComboBox x:Name="TrainSignal" SelectedIndex="0" SelectionChanged="TrainSignal_Changed"><ComboBoxItem Content="Analog"/><ComboBoxItem Content="HDZero"/></ComboBox>
+          <TextBlock Text="START FROM" Classes="label"/>
+          <ComboBox x:Name="TrainApproach" SelectedIndex="0" SelectionChanged="TrainApproach_Changed"><ComboBoxItem Content="A new model"/><ComboBoxItem Content="One of my models"/></ComboBox>
+          <StackPanel x:Name="ResumePanel" IsVisible="False" Spacing="6"><ComboBox x:Name="ResumeChoice" PlaceholderText="Choose a model"/></StackPanel>
+          <TextBlock Text="DURATION" Classes="label"/>
+          <StackPanel Orientation="Horizontal" Spacing="10"><NumericUpDown x:Name="TrainMinutes" Minimum="1" Maximum="60" Value="5" Width="130"/><ComboBox x:Name="TrainUnit" SelectedIndex="0" Width="120" SelectionChanged="TrainUnit_Changed"><ComboBoxItem Content="Minutes"/><ComboBoxItem Content="Hours"/></ComboBox></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="10"><Button Classes="accent" Content="Start training" Click="StartTrain_Click"/><Button x:Name="CancelTrainButton" Content="Stop" IsEnabled="False" Click="CancelTrain_Click"/></StackPanel>
+          <ProgressBar x:Name="TrainProgress" Minimum="0" Maximum="100" Height="8"/>
+          <TextBlock x:Name="TrainStatus" Text="Ready" Classes="note"/>
+        </StackPanel></Border></StackPanel>
+      </Grid></ScrollViewer>
+
+        <Grid x:Name="ExportPage" Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="4">
+          <Border Classes="card" Padding="8,5"><StackPanel Spacing="4">
             <Grid x:Name="ExportFolded" IsVisible="False" ColumnDefinitions="*,Auto" ColumnSpacing="10">
               <TextBlock x:Name="ExportFoldedText" Classes="note" FontSize="12" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
               <Button x:Name="ExportFoldButton" Grid.Column="1" Content="{x:Static local:UiText.ShowSettings}" Click="ExportFold_Click"/>
             </Grid>
-            <StackPanel x:Name="ExportDetails" Spacing="12">
-              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                <TextBlock Text="{x:Static local:UiText.SaveToEyebrow}" Classes="eyebrow" VerticalAlignment="Center"/>
-                <Border Grid.Column="1" Classes="chip">
-                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                    <Path Data="M0,2 Q0,0 2,0 H6 L8,2 H14 Q16,2 16,4 V11 Q16,13 14,13 H2 Q0,13 0,11 Z" Fill="#D78C52" Width="16" Height="13" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="OutputFolderChip" Grid.Column="1" FontSize="12" FontWeight="SemiBold" Foreground="#F2EEE8" VerticalAlignment="Center" TextTrimming="PrefixCharacterEllipsis"/>
-                    <TextBlock x:Name="OutputFolderNote" Grid.Column="2" FontSize="11" Foreground="#7D858A" VerticalAlignment="Center"/>
-                  </Grid>
-                </Border>
-                <Button Grid.Column="2" Content="{x:Static local:UiText.ChangeFolder}" Click="OutputFolder_Click"/>
+            <Border x:Name="ExportSettingsHost" IsVisible="False"><StackPanel x:Name="ExportDetails" Spacing="10">
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="4"><TextBlock Text="File type"/><ComboBox x:Name="FormatChoice" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch" SelectionChanged="Format_Changed"/></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Resolution"/><ComboBox x:Name="OutputHeightChoice" HorizontalAlignment="Stretch" SelectionChanged="SimpleExport_Changed"><ComboBoxItem Content="Original" Tag="0"/></ComboBox></StackPanel>
               </Grid>
-              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="20" Margin="0,8,0,0">
-                <StackPanel Spacing="8">
-                  <TextBlock Text="Resolution" Classes="rowlabel"/>
-                  <ComboBox x:Name="OutputHeightChoice" HorizontalAlignment="Stretch" SelectionChanged="SimpleExport_Changed">
-                    <ComboBoxItem Content="720p"/><ComboBoxItem Content="1080p"/>
-                  </ComboBox>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="8">
-                  <TextBlock Text="Video layout" Classes="rowlabel"/>
-                  <ComboBox x:Name="OutputLayoutChoice" HorizontalAlignment="Stretch" SelectionChanged="SimpleExport_Changed">
-                    <ComboBoxItem Content="Cleaned video"/><ComboBoxItem Content="Original + cleaned"/>
-                  </ComboBox>
-                </StackPanel>
-                <StackPanel Grid.Column="2" Spacing="8">
-                  <TextBlock Text="File format / codec" Classes="rowlabel"/>
-                  <ComboBox x:Name="FormatChoice" HorizontalAlignment="Stretch" SelectionChanged="Format_Changed"/>
-                </StackPanel>
-              </Grid>
-              <CheckBox x:Name="RemoveAudio" Content="Remove audio" IsCheckedChanged="RemoveAudio_Changed"/>
-              <TextBlock x:Name="SimpleExportNote" Classes="note"/>
-              <TextBlock Text="MP4 / H.264: everyday playback. H.265: smaller files, slower export. MOV / ProRes: large files for editing." Classes="note" FontSize="12"/>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="10"><StackPanel Spacing="4"><TextBlock Text="Video layout"/><ComboBox x:Name="OutputLayoutChoice" HorizontalAlignment="Stretch" SelectionChanged="SimpleExport_Changed"><ComboBoxItem Content="Original"/><ComboBoxItem Content="Side by side"/></ComboBox></StackPanel><CheckBox Grid.Column="1" VerticalAlignment="Bottom" x:Name="RemoveAudio" Content="Remove audio" IsCheckedChanged="RemoveAudio_Changed"/></Grid>
+              <TextBlock Text="Filename"/><TextBox x:Name="ExportName" Watermark="Output filename"/>
+              <TextBlock Text="Save to"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock x:Name="OutputFolderChip" VerticalAlignment="Center" TextTrimming="PrefixCharacterEllipsis"/><Button Grid.Column="1" Content="Browse…" Click="OutputFolder_Click"/></Grid><TextBlock x:Name="OutputFolderNote" IsVisible="False"/>
+              <TextBlock x:Name="SimpleExportNote" FontSize="12"/><TextBlock x:Name="ExportEstimate" FontSize="12" TextWrapping="Wrap"/>
+              <TextBlock IsVisible="False" Text="MP4 / H.264: everyday playback. H.265: smaller files, slower export. MOV / ProRes: large files for editing." Classes="note" FontSize="12"/>
               <StackPanel IsVisible="False">
               <StackPanel Spacing="8">
                 <TextBlock Text="{x:Static local:UiText.PurposeEyebrow}" Classes="eyebrow"/>
@@ -629,38 +477,27 @@
                   </Grid>
                   <StackPanel Orientation="Horizontal" Spacing="22">
                     <CheckBox x:Name="JoinClips" Content="{x:Static local:UiText.JoinClips}" IsCheckedChanged="ExportOption_Changed"/>
-                    <CheckBox x:Name="OpenAfterExport" Content="{x:Static local:UiText.OpenWhenDone}" IsChecked="True" IsCheckedChanged="ExportOption_Changed"/>
+                    <CheckBox x:Name="OpenAfterExport" Content="{x:Static local:UiText.OpenWhenDone}" IsChecked="False" IsCheckedChanged="ExportOption_Changed"/>
                   </StackPanel>
                 </StackPanel>
               </Expander>
               </StackPanel>
-            </StackPanel>
-            <StackPanel x:Name="ExportActions" Spacing="8">
-              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                <Button x:Name="ExportButton" Classes="accent" FontSize="16" Padding="34,11" MinWidth="200" HorizontalContentAlignment="Center" Content="{x:Static local:UiText.ExportOne}" Click="Export_Clicked"/>
-                <TextBlock x:Name="ExportSummary" Grid.Column="1" Classes="note" FontSize="12" VerticalAlignment="Center" Text=""/>
+            </StackPanel></Border>
+            <StackPanel x:Name="ExportActions" Spacing="4">
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="6">
+                <Button x:Name="AddSectionButton" Content="Add to queue" Height="28" Click="AddSection_Click"/>
+                <Button Grid.Column="1" x:Name="QueueCounter" Content="Queue (0)" Height="28" Click="ManageQueue_Click"/>
+                <StackPanel Grid.Column="3" x:Name="SimpleExportResult" IsVisible="False" Orientation="Horizontal" Spacing="6"><TextBlock x:Name="SimpleOutputPath" IsVisible="False"/><Button Height="28" x:Name="PlayExportButton" Content="Play video" Click="OpenLastVideo_Click"/><Button Height="28" Content="Reveal in Finder" Click="RevealExport_Click"/></StackPanel>
+                <StackPanel Grid.Column="4" Orientation="Horizontal"><Button x:Name="ExportButton" Classes="accent" Height="28" Content="Export video" Click="Export_Clicked"/><Button x:Name="CancelExportButton" IsVisible="False" Height="28" Content="Cancel export" Click="CancelExport_Click"/></StackPanel>
               </Grid>
-              <StackPanel x:Name="ExportRunning" IsVisible="False" Spacing="6">
-                <ProgressBar x:Name="ExportProgress" Minimum="0" Maximum="100" Height="8" CornerRadius="4"/>
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
-                  <TextBlock x:Name="ExportRunText" Classes="note" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                  <TextBlock x:Name="ExportTime" Grid.Column="1" Text="" FontSize="12" FontWeight="SemiBold" Foreground="#F2EEE8" VerticalAlignment="Center"/>
-                  <Button x:Name="CancelExportButton" Grid.Column="2" Content="{x:Static local:UiText.ExportCancel}" IsEnabled="False" Click="CancelExport_Click"/>
+              <Border Background="#1B1B1D" CornerRadius="4" Padding="6,3" MinHeight="22">
+                <Grid>
+                  <Grid x:Name="ExportIdle"><TextBlock x:Name="ExportStatus" Classes="note" FontSize="11" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="ExportSummary" IsVisible="False"/></Grid>
+                  <Grid x:Name="ExportRunning" IsVisible="False" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"><TextBlock x:Name="ExportRunText" MaxWidth="240" TextTrimming="CharacterEllipsis" FontSize="11" VerticalAlignment="Center"/><ProgressBar Grid.Column="1" x:Name="ExportProgress" Minimum="0" Maximum="100" Height="4" VerticalAlignment="Center"/><TextBlock Grid.Column="2" x:Name="ExportTime" FontSize="11" VerticalAlignment="Center"/></Grid>
                 </Grid>
-              </StackPanel>
-              <TextBlock x:Name="ExportStatus" Text="Add clips in Import first." Classes="note" FontSize="12"/>
+              </Border>
             </StackPanel>
           </StackPanel></Border>
-          <Border x:Name="SimpleExportResult" Grid.Row="1" Classes="card" IsVisible="False" VerticalAlignment="Top">
-            <StackPanel Spacing="12">
-              <TextBlock Text="Export complete" Classes="heading"/>
-              <TextBlock x:Name="SimpleOutputPath" Classes="note"/>
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <Button Content="Play exported video" Classes="accent" Click="OpenLastVideo_Click"/>
-                <Button Content="Open output folder" Click="OpenOutput_Click"/>
-              </StackPanel>
-            </StackPanel>
-          </Border>
           <Border x:Name="ReviewPanel" Grid.Row="1" IsVisible="False" Classes="card tight"><Grid RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="8">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
               <StackPanel><TextBlock Text="FINISHED CLIP" Classes="eyebrow"/><TextBlock x:Name="ReviewTitle" Classes="heading" FontSize="17" Text="Original and cleaned result"/></StackPanel>
@@ -669,18 +506,18 @@
                 <RadioButton x:Name="ReviewWipeMode" Classes="segment" GroupName="review" Content="Wipe" IsCheckedChanged="ReviewMode_Changed"/>
               </StackPanel>
             </Grid>
-            <Grid x:Name="ReviewCanvas" Grid.Row="1" MinHeight="180" Background="#1B2025" ClipToBounds="True" SizeChanged="Review_SizeChanged">
+            <Grid x:Name="ReviewCanvas" Grid.Row="1" MinHeight="180" Background="#1E1E1E" ClipToBounds="True" SizeChanged="Review_SizeChanged">
               <Grid x:Name="SideBySideView" ColumnDefinitions="*,*" ColumnSpacing="4">
                 <Image x:Name="SideBefore" Stretch="Uniform"/><Image x:Name="SideAfter" Grid.Column="1" Stretch="Uniform"/>
                 <Border Background="#B0000000" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8"><TextBlock Text="ORIGINAL" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
-                <Border Grid.Column="1" Background="#B0705039" CornerRadius="6" Padding="8,3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"><TextBlock Text="CLEANED" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
+                <Border Grid.Column="1" Background="#D0A52B32" CornerRadius="6" Padding="8,3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"><TextBlock Text="CLEANED" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
               </Grid>
               <Grid x:Name="WipeView" IsVisible="False" Background="Transparent" PointerPressed="Wipe_PointerPressed" PointerMoved="Wipe_PointerMoved" PointerReleased="Wipe_PointerReleased">
                 <Image x:Name="BeforeImage" Stretch="Uniform"/><Image x:Name="AfterImage" Stretch="Uniform"/>
-                <Border x:Name="Divider" Width="2" Background="#D78C52" HorizontalAlignment="Left"/>
-                <Border x:Name="DividerGrip" Width="26" Height="26" CornerRadius="13" Background="#D78C52" HorizontalAlignment="Left" VerticalAlignment="Center" Cursor="SizeWestEast"><TextBlock Text="&#x25C2;&#x25B8;" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                <Border x:Name="Divider" Width="2" Background="#0A84FF" HorizontalAlignment="Left"/>
+                <Border x:Name="DividerGrip" Width="26" Height="26" CornerRadius="13" Background="#0A84FF" HorizontalAlignment="Left" VerticalAlignment="Center" Cursor="SizeWestEast"><TextBlock Text="&#x25C2;&#x25B8;" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
                 <Border Background="#B0000000" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8"><TextBlock Text="ORIGINAL" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
-                <Border Background="#B0705039" CornerRadius="6" Padding="8,3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"><TextBlock Text="CLEANED" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
+                <Border Background="#D0A52B32" CornerRadius="6" Padding="8,3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"><TextBlock Text="CLEANED" Foreground="White" FontSize="11" FontWeight="Bold"/></Border>
               </Grid>
             </Grid>
             <Slider x:Name="WipeSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="50" IsVisible="False" ValueChanged="Wipe_Changed"/>
@@ -690,10 +527,10 @@
               <TextBlock x:Name="ReviewTime" Grid.Column="2" Text="0:00" FontSize="12" VerticalAlignment="Center" FontFamily="Consolas, Menlo, monospace"/>
             </Grid>
             <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="14">
-              <Border Background="#242426" BorderBrush="#705039" BorderThickness="1" CornerRadius="10" Padding="14,8" VerticalAlignment="Center">
+              <Border Background="#28282A" BorderBrush="#345477" BorderThickness="1" CornerRadius="10" Padding="14,8" VerticalAlignment="Center">
                 <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="28">
-                  <StackPanel><TextBlock Text="GAINED SO FAR" Classes="label"/><TextBlock x:Name="GainLabel" Text="&#x2014;" FontSize="18" FontWeight="SemiBold" Foreground="#F2EEE8"/></StackPanel>
-                  <StackPanel Grid.Column="1"><TextBlock Text="STILL POSSIBLE, NO LOSS" Classes="label"/><TextBlock x:Name="HeadroomLabel" Text="&#x2014;" FontSize="18" FontWeight="SemiBold" Foreground="#D78C52"/></StackPanel>
+                  <StackPanel><TextBlock Text="GAINED SO FAR" Classes="label"/><TextBlock x:Name="GainLabel" Text="&#x2014;" FontSize="18" FontWeight="SemiBold" Foreground="#F2F2F7"/></StackPanel>
+                  <StackPanel Grid.Column="1"><TextBlock Text="STILL POSSIBLE, NO LOSS" Classes="label"/><TextBlock x:Name="HeadroomLabel" Text="&#x2014;" FontSize="18" FontWeight="SemiBold" Foreground="#0A84FF"/></StackPanel>
                   <StackPanel Grid.Column="2"><TextBlock Text="COST OF A 2ND PASS" Classes="label"/><TextBlock x:Name="LossLabel" Text="&#x2014;" FontSize="18" FontWeight="SemiBold" Foreground="#9C3F1F"/></StackPanel>
                 </Grid>
               </Border>
@@ -705,7 +542,8 @@
             <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Button x:Name="AutoRefineButton" Classes="accent" FontSize="14" Padding="16,8" Content="&#x2728; Auto refine" ToolTip.Tip="Picks the settings from the measurement and exports the original again right away, as a new file. Nothing is lost." Click="AutoRefine_Click"/>
-              <Button Content="Open output folder" Click="OpenOutput_Click"/>
+              <Button Content="Reveal in Finder" Click="RevealExport_Click"/>
+                <Button Content="Open output folder" Click="OpenOutput_Click"/>
               <Button Content="Try other settings" ToolTip.Tip="Back to Repair with this clip: the original is exported again, without any quality loss" Click="TryAgain_Click"/>
               <Button Content="Refine the cleaned file" ToolTip.Tip="Adds the cleaned file to the queue for a second pass, e.g. stronger noise reduction or upscaling" Click="Refine_Click"/>
             </StackPanel>
@@ -714,38 +552,18 @@
           </Grid></Border>
         </Grid>
 
-        <!-- Model training -->
-        <StackPanel x:Name="TrainPage" IsVisible="False" Spacing="14"><Border Classes="card"><StackPanel Spacing="12">
-          <TextBlock Text="OPTIONAL" Classes="eyebrow"/>
-          <TextBlock Text="Train a small model on your own footage" Classes="heading"/>
-          <TextBlock Classes="note" Text="Not needed for cleaning. A tiny self-supervised network learns your receiver's typical pixel statistics from damaged recordings; select it later under Repair &#x2192; Advanced."/>
-          <TextBlock Text="RECORDINGS FOLDER" Classes="label"/>
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="TrainFolder" PlaceholderText="Folder with recordings"/><Button Grid.Column="1" Content="Choose folder" Click="TrainFolder_Click"/></Grid>
-          <TextBlock Text="SIGNAL" Classes="label"/>
-          <ComboBox x:Name="TrainSignal" SelectedIndex="0" SelectionChanged="TrainSignal_Changed"><ComboBoxItem Content="Analog"/><ComboBoxItem Content="HDZero"/></ComboBox>
-          <TextBlock Text="START FROM" Classes="label"/>
-          <ComboBox x:Name="TrainApproach" SelectedIndex="0" SelectionChanged="TrainApproach_Changed"><ComboBoxItem Content="A new model"/><ComboBoxItem Content="One of my models"/></ComboBox>
-          <StackPanel x:Name="ResumePanel" IsVisible="False" Spacing="6"><ComboBox x:Name="ResumeChoice" PlaceholderText="Choose a model"/></StackPanel>
-          <TextBlock Text="DURATION" Classes="label"/>
-          <StackPanel Orientation="Horizontal" Spacing="10"><NumericUpDown x:Name="TrainMinutes" Minimum="1" Maximum="60" Value="5" Width="130"/><ComboBox x:Name="TrainUnit" SelectedIndex="0" Width="120" SelectionChanged="TrainUnit_Changed"><ComboBoxItem Content="Minutes"/><ComboBoxItem Content="Hours"/></ComboBox></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="10"><Button Classes="accent" Content="Start training" Click="StartTrain_Click"/><Button x:Name="CancelTrainButton" Content="Stop" IsEnabled="False" Click="CancelTrain_Click"/></StackPanel>
-          <ProgressBar x:Name="TrainProgress" Minimum="0" Maximum="100" Height="8"/>
-          <TextBlock x:Name="TrainStatus" Text="Ready" Classes="note"/>
-        </StackPanel></Border></StackPanel>
-      </Grid></ScrollViewer>
-
       <!-- Step footer -->
-      <Border Grid.Row="2" Background="#242426" BorderBrush="#38383B" BorderThickness="0,1,0,0" Padding="28,12">
+      <Border IsVisible="False" Grid.Row="2" Background="#28282A" BorderBrush="#38383B" BorderThickness="0,1,0,0" Padding="16,4">
         <Grid ColumnDefinitions="Auto,*,Auto">
-          <Button x:Name="BackButton" Content="&#x2190; Back" Click="Back_Step_Click"/>
+          <Button x:Name="BackButton" Focusable="False" Content="&#x2190; Back" Click="Back_Step_Click"/>
           <TextBlock x:Name="FooterNote" Grid.Column="1" Text="" Classes="note" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-          <Button x:Name="NextButton" Grid.Column="2" Classes="accent" Content="Next: Trim &#x2192;" Click="Next_Step_Click"/>
+          <Button x:Name="NextButton" Focusable="False" Grid.Column="2" Classes="accent" Content="Next: Trim &#x2192;" Click="Next_Step_Click"/>
         </Grid>
       </Border>
 
       <!-- Share: the cleaned clip brought into a format to post. -->
       <Grid x:Name="ShareOverlay" Grid.Row="0" Grid.RowSpan="3" IsVisible="False" Background="#66101418">
-        <Border Background="#242426" CornerRadius="6" Padding="26,20" Width="560" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">
+        <Border Background="#28282A" CornerRadius="6" Padding="26,20" Width="560" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">
           <StackPanel Spacing="12">
             <StackPanel Spacing="2">
               <TextBlock Text="SHARE" Classes="eyebrow"/>
@@ -771,11 +589,11 @@
 
       <!-- OSD mask editor: over the Repair page, the frame large with the mask tinted. -->
       <Grid x:Name="MaskOverlay" Grid.Row="0" Grid.RowSpan="3" IsVisible="False" Background="#99101418">
-        <Border Background="#1B2025" CornerRadius="14" Margin="22,18" BoxShadow="0 12 40 0 #50000000" Padding="16,12">
+        <Border Background="#1E1E1E" CornerRadius="14" Margin="22,18" BoxShadow="0 12 40 0 #50000000" Padding="16,12">
           <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
               <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="{x:Static local:UiText.MaskEyebrow}" Classes="eyebrow" Foreground="#FFC08E"/>
+                <TextBlock Text="{x:Static local:UiText.MaskEyebrow}" Classes="eyebrow" Foreground="#A8D2FF"/>
                 <TextBlock x:Name="MaskTitleText" Text="{x:Static local:UiText.MaskTitle}" FontSize="17" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
               <Button Grid.Column="1" Classes="dark" Content="{x:Static local:UiText.Cancel}" VerticalAlignment="Center" Click="MaskCancel_Click"/>
@@ -806,7 +624,7 @@
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><Border Width="12" Height="12" CornerRadius="3" Background="#EF771B"/><TextBlock Text="{x:Static local:UiText.MaskLegendRemoved}" Foreground="#E6EAED" FontSize="12"/></StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><Border Width="12" Height="12" CornerRadius="3" Background="#2D9CDB"/><TextBlock Text="{x:Static local:UiText.MaskLegendKept}" Foreground="#E6EAED" FontSize="12"/></StackPanel>
               <StackPanel Grid.Column="2" Spacing="1">
-                <TextBlock x:Name="MaskStatsText" Foreground="#FFC08E" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="MaskStatsText" Foreground="#A8D2FF" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                 <TextBlock Text="{x:Static local:UiText.MaskHint}" Foreground="#AEB6BC" FontSize="11" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
             </Grid>
@@ -816,13 +634,13 @@
 
       <!-- Busy overlay: while the engine works, only this stays sharp -->
       <Grid x:Name="BusyOverlay" Grid.Row="0" Grid.RowSpan="3" IsVisible="False" Background="#66101418">
-        <Border Background="#242426" CornerRadius="6" Padding="28,22" MinWidth="420" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">
+        <Border Background="#28282A" CornerRadius="6" Padding="28,22" MinWidth="420" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 12 40 0 #40000000">
           <StackPanel Spacing="12">
             <TextBlock x:Name="BusyTitle" Text="Working&#x2026;" Classes="heading"/>
             <local:FlightProgress x:Name="BusyBar" IsIndeterminate="True" Margin="0,6,0,0"/>
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
               <TextBlock x:Name="BusyText" Text="" Classes="note" FontSize="12" VerticalAlignment="Center"/>
-              <TextBlock x:Name="BusyTime" Grid.Column="1" Text="" FontSize="12" FontWeight="SemiBold" Foreground="#F2EEE8" VerticalAlignment="Center"/>
+              <TextBlock x:Name="BusyTime" Grid.Column="1" Text="" FontSize="12" FontWeight="SemiBold" Foreground="#F2F2F7" VerticalAlignment="Center"/>
             </Grid>
             <Button x:Name="BusyCancel" Content="Cancel" HorizontalAlignment="Right" IsVisible="False" Click="BusyCancel_Click"/>
           </StackPanel>

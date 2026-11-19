@@ -53,6 +53,10 @@ class Look:
     """Strengths of the five steps, each 0..1; all zero is no look at all."""
 
     saturation: float = 1.0
+    brightness: float = 1.0
+    contrast: float = 1.0
+    gamma: float = 1.0
+    spatial: float = 0.0
     grade: float = 0.0
     glow: float = 0.0
     fringe: float = 0.0
@@ -61,14 +65,14 @@ class Look:
 
     @property
     def active(self) -> bool:
-        return self.saturation != 1.0 or any(value > 0 for value in (self.grade, self.glow, self.fringe, self.vignette, self.grain))
+        return (self.brightness, self.contrast, self.gamma, self.spatial) != (1, 1, 1, 0) or self.saturation != 1.0 or any(value > 0 for value in (self.grade, self.glow, self.fringe, self.vignette, self.grain))
 
     @classmethod
     def of(cls, recipe: Arbeitsrezept) -> Look:
         """The look a recipe asks for; switched off it is the empty look."""
         if not recipe.look:
-            return cls(saturation=recipe.saturation)
-        return cls(saturation=recipe.saturation, grade=float(recipe.look_farbstimmung), glow=float(recipe.look_leuchten),
+            return cls(saturation=recipe.saturation, brightness=recipe.brightness, contrast=recipe.contrast, gamma=recipe.gamma, spatial=recipe.spatial)
+        return cls(saturation=recipe.saturation, brightness=recipe.brightness, contrast=recipe.contrast, gamma=recipe.gamma, spatial=recipe.spatial, grade=float(recipe.look_farbstimmung), glow=float(recipe.look_leuchten),
                    fringe=float(recipe.look_farbsaum), vignette=float(recipe.look_vignette), grain=float(recipe.look_koernung))
 
 
@@ -167,6 +171,11 @@ def look_frame(frame: np.ndarray, look: Look, index: int = 0) -> np.ndarray:
     if not look.active:
         return frame
     picture = cv2.addWeighted(frame, 1 / 255, frame, 0, 0, dtype=cv2.CV_32F)
+    if look.spatial > 0:
+        smooth = cv2.bilateralFilter(picture, 5, .08, 3)
+        picture = cv2.addWeighted(picture, 1 - look.spatial, smooth, look.spatial, 0)
+    if (look.brightness, look.contrast, look.gamma) != (1, 1, 1):
+        picture = np.power(np.clip((picture - .5) * look.contrast + .5 + (look.brightness - 1), 0, 1), 1 / look.gamma)
     if look.saturation != 1.0:
         luminance = np.sum(picture * LUMA, axis=2, keepdims=True)
         picture = luminance + (picture - luminance) * look.saturation

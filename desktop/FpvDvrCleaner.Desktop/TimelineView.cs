@@ -8,22 +8,17 @@ using Avalonia.Media.Imaging;
 namespace FpvDvrCleaner.Desktop;
 
 /// <summary>
-/// The trim editor's timeline. It shows the kept parts of a recording side by
-/// side, the way a video editor shows clips on a track: removing a part closes
-/// the gap and leaves a thin cut edge. Dragging an edge reveals or hides
-/// footage again. Everything is drawn directly, so long clips stay smooth.
-///
-/// Times handed in and out are always source seconds; the control maps them to
-/// the "output" axis (kept material only) for drawing and hit testing.
+/// Full source timeline; excluded footage stays visible under a shaded overlay.
+/// All geometry and pointer positions use source seconds.
 /// </summary>
 public sealed class TimelineView : Control
 {
-    public const double RulerHeight = 26;
-    public const double VideoTop = 32;
-    public const double VideoHeight = 82;
-    public const double AudioTop = 120;
-    public const double AudioHeight = 44;
-    public const double TotalHeight = 170;
+    public const double RulerHeight = 20;
+    public const double VideoTop = 22;
+    public const double VideoHeight = 42;
+    public const double AudioTop = 64;
+    public const double AudioHeight = 0;
+    public const double TotalHeight = 68;
     private const double HandleWidth = 7;
     private const double SnapPixels = 9;
     private const double MinPart = 0.1;
@@ -36,13 +31,13 @@ public sealed class TimelineView : Control
     private static readonly IBrush TickBrush = new SolidColorBrush(Color.Parse("#7E878F"));
     private static readonly IBrush MinorTickBrush = new SolidColorBrush(Color.Parse("#4A525A"));
     private static readonly IBrush LabelBrush = new SolidColorBrush(Color.Parse("#AEB6BC"));
-    private static readonly IBrush AccentBrush = new SolidColorBrush(Color.Parse("#F08A3A"));
-    private static readonly IBrush HandleBrush = new SolidColorBrush(Color.Parse("#D9F08A3A"));
-    private static readonly IBrush SelectedHandleBrush = new SolidColorBrush(Color.Parse("#FFC08E"));
+    private static readonly IBrush AccentBrush = new SolidColorBrush(Color.Parse("#0A84FF"));
+    private static readonly IBrush HandleBrush = new SolidColorBrush(Color.Parse("#D90A84FF"));
+    private static readonly IBrush SelectedHandleBrush = new SolidColorBrush(Color.Parse("#80BFFF"));
     private static readonly IBrush GripBrush = new SolidColorBrush(Color.Parse("#8020252B"));
     private static readonly IBrush CutEdgeBrush = new SolidColorBrush(Color.Parse("#E6EAED"));
     private static readonly IBrush WaveBrush = new SolidColorBrush(Color.Parse("#5FA8E8"));
-    private static readonly IBrush PlayheadBrush = new SolidColorBrush(Color.Parse("#2D9CDB"));
+    private static readonly IBrush PlayheadBrush = new SolidColorBrush(Color.Parse("#FFFFFF"));
     private static readonly IBrush HoverBrush = new SolidColorBrush(Color.Parse("#80FFFFFF"));
     private static readonly IBrush BookmarkBrush = new SolidColorBrush(Color.Parse("#FFC857"));
     private static readonly Pen EdgePen = new(AccentBrush, 2);
@@ -142,35 +137,12 @@ public sealed class TimelineView : Control
     // ------------------------------------------------------------ geometry
 
     private double Width_ => !double.IsNaN(Width) && Width > 0 ? Width : Bounds.Width > 0 ? Bounds.Width : 1000;
-    public double PixelsPerSecond => Width_ / OutputDuration;
+    public double PixelsPerSecond => Width_ / _duration;
 
-    /// <summary>Where a source moment sits on the output axis; removed footage collapses onto the cut.</summary>
-    public double OutputOf(double source)
-    {
-        var offset = 0.0;
-        foreach (var part in _segments)
-        {
-            if (source < part.In) return offset;
-            if (source <= part.Out) return offset + source - part.In;
-            offset += part.Out - part.In;
-        }
-        return offset;
-    }
-
-    public double SourceOf(double output)
-    {
-        var offset = 0.0;
-        foreach (var part in _segments)
-        {
-            var length = part.Out - part.In;
-            if (output <= offset + length) return part.In + Math.Max(0, output - offset);
-            offset += length;
-        }
-        return _segments.Count > 0 ? _segments[^1].Out : 0;
-    }
-
+    public double OutputOf(double source) => Math.Clamp(source, 0, _duration);
+    public double SourceOf(double output) => Math.Clamp(output, 0, _duration);
     public double XOf(double source) => OutputOf(source) * PixelsPerSecond;
-    public double SecondsAt(double x) => SourceOf(Math.Clamp(x / PixelsPerSecond, 0, OutputDuration));
+    public double SecondsAt(double x) => SourceOf(x / PixelsPerSecond);
 
     /// <summary>Spacing of labelled ruler ticks, chosen so labels never crowd.</summary>
     public double RulerStep()
@@ -374,16 +346,26 @@ public sealed class TimelineView : Control
         context.FillRectangle(Background, new Rect(0, 0, width, TotalHeight));
         context.FillRectangle(RulerBrush, new Rect(0, 0, width, RulerHeight));
         context.FillRectangle(TrackBrush, new Rect(0, VideoTop, width, VideoHeight));
-        context.FillRectangle(TrackBrush, new Rect(0, AudioTop, width, AudioHeight));
+
         if (_duration <= 0 || _segments.Count == 0) return;
 
         DrawThumbnails(context);
-        DrawWaveform(context, width);
-        DrawRuler(context, width);
-        DrawParts(context);
-        DrawBookmarks(context);
 
-        if (_hover >= 0 && _drag == DragKind.None && SegmentAt(_hover) >= 0)
+        DrawRuler(context, width);
+        var excluded = new SolidColorBrush(Color.Parse("#99000000"));
+        var previous = 0.0;
+        foreach (var part in _segments)
+        {
+            if (part.In > previous)
+                context.FillRectangle(excluded, new Rect(XOf(previous), VideoTop, XOf(part.In)-XOf(previous), AudioTop+AudioHeight-VideoTop));
+            previous = part.Out;
+        }
+        if (previous < _duration)
+            context.FillRectangle(excluded, new Rect(XOf(previous), VideoTop, XOf(_duration)-XOf(previous), AudioTop+AudioHeight-VideoTop));
+        DrawParts(context);
+
+
+        if (_hover >= 0 && _drag == DragKind.None)
         {
             var x = Math.Round(XOf(_hover)) + 0.5;
             context.DrawLine(HoverPen, new Point(x, VideoTop), new Point(x, AudioTop + AudioHeight));
@@ -399,7 +381,7 @@ public sealed class TimelineView : Control
     {
         var step = RulerStep();
         var minor = step / 5;
-        var total = OutputDuration;
+        var total = _duration;
         for (var t = 0.0; t <= total + 1e-9; t += minor)
         {
             var x = Math.Round(t * PixelsPerSecond) + 0.5;
@@ -420,7 +402,7 @@ public sealed class TimelineView : Control
         }
         var pps = PixelsPerSecond;
         var tileWidth = VideoHeight * 4 / 3;
-        foreach (var part in _segments)
+        foreach (var part in new (double In, double Out)[] { (0, _duration) })
         {
             var left = XOf(part.In);
             var partWidth = (part.Out - part.In) * pps;
@@ -519,7 +501,6 @@ public sealed class TimelineView : Control
     {
         foreach (var bookmark in _bookmarks)
         {
-            if (SegmentAt(bookmark) < 0) continue;  // Inside removed footage: nothing to show.
             var x = Math.Round(XOf(bookmark)) + 0.5;
             context.DrawLine(BookmarkPen, new Point(x, RulerHeight), new Point(x, AudioTop + AudioHeight));
             var flag = new StreamGeometry();

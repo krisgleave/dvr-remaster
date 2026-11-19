@@ -30,7 +30,7 @@ public partial class MainWindow
     // Recordings whose signal was detected or chosen by hand, so it is not changed behind the user's back.
     private readonly HashSet<string> _signalSettled = new(StringComparer.OrdinalIgnoreCase);
     // The frame is rendered again shortly after any change; a newer change cancels an older render.
-    private readonly DispatcherTimer _autoRender = new() { Interval = TimeSpan.FromMilliseconds(1200) };
+    private readonly DispatcherTimer _autoRender = new() { Interval = TimeSpan.FromMilliseconds(180) };
     private CancellationTokenSource? _previewCancel;
 
     private void SetUpRepairPage()
@@ -109,8 +109,8 @@ public partial class MainWindow
     private void ApplyLevel(string signal, string level)
     {
         var preset = RepairPreset.LevelFor(signal, level);
-        ApplyRepair(preset.AppliedTo(CurrentRepair()));
         _basePreset = preset;
+        ApplyRepair(preset.AppliedTo(CurrentRepair()));
         RememberSettings();
         RepairChanged();
     }
@@ -251,8 +251,8 @@ public partial class MainWindow
     private void ChoosePreset(RepairPreset preset)
     {
         ClosePresetEditor();
-        ApplyRepair(preset.AppliedTo(CurrentRepair()));
         _basePreset = preset;
+        ApplyRepair(preset.AppliedTo(CurrentRepair()));
         RememberSettings();
         RepairChanged();
     }
@@ -366,13 +366,11 @@ public partial class MainWindow
     // ---- the big check: one frame, original against result or without against with one effect
 
     /// <summary>The frame the check shows: the trim playhead, inside a kept part.</summary>
-    private double PreviewMoment(FootageItem clip) =>
-        Timeline.SegmentAt(_head) >= 0 && _selected == clip ? Math.Clamp(_head, clip.In, Math.Max(clip.In, clip.Out - 0.3))
-            : Math.Clamp(clip.Segments[Math.Max(0, _selected == clip ? Timeline.NearestSegment(_head) : 0)].In, clip.In, Math.Max(clip.In, clip.Out - 0.3));
+    private double PreviewMoment(FootageItem clip) => Math.Clamp(_head, 0, Math.Max(0, clip.Duration - 1 / Math.Max(1, clip.Fps)));
 
     private void RequestAutoRender()
     {
-        if (_page != 2 || _selected == null) return;
+        if (_page != 1 || !WorkspaceCompare.IsVisible || _selected == null) return;
         _autoRender.Stop();
         _autoRender.Start();
     }
@@ -380,9 +378,12 @@ public partial class MainWindow
     /// <summary>After a change the frame is rendered again on its own, without covering the page.</summary>
     private async Task AutoRenderAsync()
     {
-        if (_page != 2 || _selected is not { } clip || MaskOverlay.IsVisible || BusyOverlay.IsVisible) return;
-        await RenderCompareAsync(clip, BuildRecipe(clip), null, $"{clip} at {Clock(PreviewMoment(clip))}",
-            UiText.LabelOriginal, UiText.LabelCleaned, UiText.PreviewStatusDone, quiet: true);
+        if (_page != 1 || !WorkspaceCompare.IsVisible || _selected is not { } clip || MaskOverlay.IsVisible || BusyOverlay.IsVisible) return;
+        if (_playing) { StartPlayback(_head); return; }
+        _previewCancel?.Cancel();
+        try { PlayRestored(clip, PreviewMoment(clip), singleFrame: true); }
+        catch (Exception ex) { PreviewStatus.Text = $"Preview failed: {ex.Message}"; }
+        await Task.CompletedTask;
     }
 
     private async void Preview_Click(object? sender, RoutedEventArgs e)
@@ -455,18 +456,18 @@ public partial class MainWindow
             var original = LoadBitmap(before);
             var cleaned = LoadBitmap(after);
             // A rendered reference may be upscaled like the result; the box scales along.
-            _compareOriginal = Cropped(original, clip.Box, clip.Width);
+            _compareOriginal = original;
             _comparePlain = reference == null && outcome.ValueKind == JsonValueKind.Object && outcome.TryGetProperty("plain", out var made)
                             && made.ValueKind == JsonValueKind.String && File.Exists(plain)
-                ? Cropped(LoadBitmap(plain), clip.Box, clip.Width) : null;
+                ? LoadBitmap(plain) : null;
             LookCompare.IsVisible = _comparePlain != null;
             if (reference != null) LookCompare.IsChecked = false;
             CompareBefore.Source = _compareOriginal;
             ShowCompareLeft();
             CompareLeftLabel.Text = leftLabel;
             CompareRightLabel.Text = rightLabel;
-            CompareAfter.Source = Cropped(cleaned, clip.Box, clip.Width);
-            _compareAspect = clip.Box is { } cb ? (double)cb.Width / cb.Height : (double)clip.Width / clip.Height;
+            CompareAfter.Source = cleaned;
+            _compareAspect = DisplayAspect(clip);
             PreviewTitle.Text = title;
             CompareHint.IsVisible = false;
             CompareDivider.IsVisible = true;
@@ -513,9 +514,9 @@ public partial class MainWindow
         {
             var outcome = await EngineAsync(new { action = "osd", source = clip.Path, start = clip.In, end = clip.Out,
                 seconds = PreviewMoment(clip), target, manual_mask = clip.ManualMask is { } mask && File.Exists(mask) ? mask : null });
-            var marked = Cropped(LoadBitmap(target), clip.Box, clip.Width);
+            var marked = LoadBitmap(target);
             _compareOriginal = _comparePlain = null; LookCompare.IsVisible = false; ShowCompareLeft();
-            _compareAspect = clip.Box is { } cb ? (double)cb.Width / cb.Height : (double)clip.Width / clip.Height;
+            _compareAspect = DisplayAspect(clip);
             CompareBefore.Source = marked; CompareAfter.Source = marked; CompareHint.IsVisible = false;
             PreviewTitle.Text = "Overlays marked in orange";
             PreviewStatus.Text = outcome.GetProperty("found").GetBoolean()

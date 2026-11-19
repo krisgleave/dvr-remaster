@@ -1,0 +1,3 @@
+Repository: https://github.com/tmds/Tmds.DBus
+Revision: b4a7fed0b878f74cb54f7cca84d2889af4e596ba
+Licence path: COPYING

@@ -9,10 +9,10 @@ import unittest
 
 import cv2
 import numpy as np
-from flugbild.bridge import run
+from flugbild.bridge import run, display_frame
 from flugbild.delivery import delivery_size
 from flugbild.look import Look, look_frame
-from flugbild.media import tools_available
+from flugbild.media import tools_available, VideoKenndaten
 from flugbild.recipe import Arbeitsrezept
 
 
@@ -21,6 +21,14 @@ class DeliverySettingsTests(unittest.TestCase):
         self.assertEqual(delivery_size(4/3, 720), (960, 720))
         self.assertEqual(delivery_size(4/3, 1080, True), (2880, 1080))
         self.assertEqual(delivery_size(16/9, 1080), (1920, 1080))
+        self.assertEqual(delivery_size(5/4, 1080), (1350, 1080))
+        self.assertEqual(delivery_size(5/4, 2160), (2700, 2160))
+        Arbeitsrezept(output_height=2160).validate()
+
+    def test_anamorphic_preview(self):
+        info = VideoKenndaten(1, 1920, 1080, False, sar=45/64)
+        frame = np.zeros((1080, 1920, 3), np.uint8)
+        self.assertEqual(display_frame(frame, info).shape, (1080, 1350, 3))
 
     def test_saturation_only_increases_colour_not_grey(self):
         grey = np.full((32, 32, 3), 100, np.uint8)
@@ -33,10 +41,14 @@ class DeliverySettingsTests(unittest.TestCase):
     def test_new_settings_round_trip_and_validation(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'recipe.json'
-            plan = Arbeitsrezept(output_height=720, comparison=True, saturation=1.15, remove_audio=True)
+            plan = Arbeitsrezept(output_height=720, comparison=True, saturation=1.5, remove_audio=True, brightness=1.2, contrast=1.1, gamma=1.4, spatial=.3)
             plan.save(path)
             self.assertEqual(Arbeitsrezept.load(path), plan)
-        for options in [dict(remove_audio="yes"), dict(output_height=800), dict(comparison=True),dict(saturation=float('nan')),dict(saturation=1.5)]:
+        for saturation in (0.0, 1.0, 1.5, 2.0):
+            Arbeitsrezept(saturation=saturation).validate()
+        for options in [dict(remove_audio="yes"), dict(output_height=9000), dict(comparison=True),dict(saturation=float('nan')),dict(saturation=-0.01), dict(saturation=2.01),
+                        dict(brightness=.49), dict(contrast=1.51), dict(gamma=2.01),
+                        dict(spatial=-.01), dict(spatial=1.01)]:
             with self.assertRaises(ValueError):
                 Arbeitsrezept(**options).validate()
 
@@ -73,16 +85,14 @@ class DeliveryExportTests(unittest.TestCase):
                     self.assertEqual(int(v['nb_read_frames']),24)
                     self.assertAlmostEqual(float(data['format']['duration']),24/(60000/1001),delta=.06)
                     if comparison:
-                        cap=cv2.VideoCapture(str(target));count=0
-                        while True:
-                            ok,f=cap.read()
-                            if not ok: break
-                            w=f.shape[1]//2
-                            # Same neutral recipe: panels must show the same moving frame.
-                            delta=np.abs(f[80:,:w].astype(float)-f[80:,w:].astype(float)).mean()
+                        from flugbild.media import decode_frames
+                        frames = decode_frames(target, 0, v['width'], v['height'], count=26)
+                        count = 0
+                        for f in frames:
+                            w = f.shape[1]//2
+                            delta = np.abs(f[80:,:w].astype(float)-f[80:,w:].astype(float)).mean()
                             self.assertLess(delta,4.0, f'Frame {count} is out of sync: {delta}')
-                            count+=1
-                        cap.release()
+                            count += 1
                         self.assertEqual(count,24)
             self.assertFalse(list(folder.glob('.fpv-render-*')), 'Temporary frames were not cleaned up')
 

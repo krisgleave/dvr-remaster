@@ -14,3 +14,12 @@ signal_check.png
 bin/
 obj/
 .vs/
+
+# Local development files
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+AGENTS.md

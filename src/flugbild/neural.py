@@ -212,36 +212,44 @@ def train_network(folder: Path, signalart: str, seconds: int,
     for clip in clips:
         if stop.is_set() or time.monotonic() >= collection_deadline:
             break
-        capture = cv2.VideoCapture(str(clip))
-        if not capture.isOpened():
-            continue
-        found = False
+        from .media import video_sampling_info, decode_frames
         try:
-            total = max(1, int(capture.get(cv2.CAP_PROP_FRAME_COUNT)))
-            if total < 5:
+            width, height, fps, total = video_sampling_info(clip)
+        except Exception:
+            continue
+
+        found = False
+        if total < 5:
+            continue
+
+        for position in np.linspace(2, total - 3, 24, dtype=int):
+            if stop.is_set() or time.monotonic() >= collection_deadline:
+                break
+
+            try:
+                frames = decode_frames(
+                    clip, (int(position) - 2) / fps,
+                    width, height, count=5,
+                    timeout=max(0.1, collection_deadline - time.monotonic())
+                )
+            except Exception:
                 continue
-            for position in np.linspace(2, total - 3, 24, dtype=int):
-                if stop.is_set() or time.monotonic() >= collection_deadline:
-                    break
-                capture.set(cv2.CAP_PROP_POS_FRAMES, int(position) - 2)
-                window = []
-                for _ in range(5):
-                    okay, frame = capture.read()
-                    if not okay or min(frame.shape[:2]) < 3:
-                        break
-                    window.append(cv2.resize(frame, (min(frame.shape[1], 640),
-                                                     min(frame.shape[0], 360)),
-                                             interpolation=cv2.INTER_AREA))
-                if len(window) != 5:
-                    continue
-                found = True
-                h, w = window[2].shape[:2]
-                points = np.column_stack((rng.integers(1, h - 1, 384),
-                                          rng.integers(1, w - 1, 384)))
-                batches.append(_motion_examples(window, points, signalart))
-                announce(sum(len(x) for x, _ in batches), 0.0)
-        finally:
-            capture.release()
+
+            if len(frames) != 5 or min(width, height) < 3:
+                continue
+
+            window = [
+                cv2.resize(frame, (min(width, 640), min(height, 360)),
+                           interpolation=cv2.INTER_AREA)
+                for frame in frames
+            ]
+
+            found = True
+            h, w = window[2].shape[:2]
+            points = np.column_stack((rng.integers(1, h - 1, 384),
+                                      rng.integers(1, w - 1, 384)))
+            batches.append(_motion_examples(window, points, signalart))
+            announce(sum(len(x) for x, _ in batches), 0.0)
         touched += int(found)
     if stop.is_set():
         raise InterruptedError("Training canceled")

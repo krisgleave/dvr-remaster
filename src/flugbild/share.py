@@ -19,6 +19,7 @@ import cv2
 import numpy as np
 
 from .media import PROCESS_FLAGS, VideoKenndaten, inspect_video
+from .processor import publish_output
 from .processor import Laufergebnis, diagnostic_tail, encoding_options, temporary_output
 from .recipe import Arbeitsrezept
 from .restoration import _encoder, picture_box
@@ -353,7 +354,7 @@ def make_share(cleaned: Path, target: Path, job: Teilauftrag,
         if encoder.returncode:
             return Teilergebnis(Laufergebnis(cleaned, target, False,
                                              diagnostic_tail(log) or "Encoding the share video failed"))
-        pending.replace(target)
+        publish_output(pending, target)
         progress(1.0)
         return Teilergebnis(Laufergebnis(cleaned, target, True, "Done"), duration, size, rate, with_sound)
     except Exception:

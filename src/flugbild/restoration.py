@@ -27,6 +27,7 @@ from .neural import NeuralProfile
 from .media import PROCESS_FLAGS, VideoKenndaten
 from . import handmask
 from .osd import detect_osd, remove_stream
+from .processor import publish_output
 from .processor import (Laufergebnis, caption_workspace, encoding_options,
                         diagnostic_tail, output_duration, temporary_output, video_filters)
 from .recipe import Arbeitsrezept
@@ -186,9 +187,15 @@ def _stages(frames: Iterable[np.ndarray], recipe: Arbeitsrezept,
     film grain of the look is seeded with it. ``look=False`` leaves the look out.
     """
     effort = EFFORTS[recipe.aufwand]
-    stream: Iterable[np.ndarray] = frames
+    originals = deque()
+    protect = recipe.preserve_osd and not recipe.osd_entfernen and osd is not None and osd[0].any()
+    def remember():
+        for frame in frames:
+            originals.append(frame.copy())
+            yield frame
+    stream: Iterable[np.ndarray] = remember() if protect else frames
     if recipe.signalart == "analog" and recipe.farbberuhigung > 0:
-        stream = repair_stream(stream, recipe.farbberuhigung, osd[0] if osd else None,
+        stream = repair_stream(stream, recipe.farbberuhigung, osd[0] if osd and (recipe.preserve_osd or recipe.osd_entfernen) else None,
                                effort.colour_radius, effort.colour_flow)
     if recipe.signalart == "digital" and recipe.blockpflege > 0 and fingerprint is None:
         stream = mend_breakups(stream, recipe.blockpflege)
@@ -206,7 +213,25 @@ def _stages(frames: Iterable[np.ndarray], recipe: Arbeitsrezept,
     finish = Look.of(recipe)
     if look and finish.active:
         stream = look_stream(stream, finish, first_index)
-    return iter(stream)
+    def finish_frames(processed):
+        for frame in processed:
+            frame = encoder_detail(frame, recipe)
+            if protect:
+                frame = protect_overlay(originals.popleft(), frame, osd[0])
+            yield frame
+    return finish_frames(stream)
+
+
+def protect_overlay(original, repaired, mask):
+    """Restore detected glyph pixels, with a narrow feather around their edges."""
+    core = cv2.dilate((mask > 0).astype(np.uint8), np.ones((3, 3), np.uint8))
+    alpha = np.maximum(core.astype(np.float32), cv2.GaussianBlur(core.astype(np.float32), (5, 5), 0))
+    if original.shape[:2] != repaired.shape[:2]:
+        size = (repaired.shape[1], repaired.shape[0])
+        original = cv2.resize(original, size, interpolation=cv2.INTER_CUBIC)
+        alpha = cv2.resize(alpha, size)
+    alpha = alpha[:, :, None]
+    return np.rint(repaired * (1 - alpha) + original * alpha).clip(0, 255).astype(np.uint8)
 
 
 def clip_mask(source: Path, recipe: Arbeitsrezept, info: VideoKenndaten,
@@ -226,9 +251,9 @@ def clip_mask(source: Path, recipe: Arbeitsrezept, info: VideoKenndaten,
                 raise
             found = None
         return handmask.merge(found, layers, shape)
-    if recipe.signalart == "analog" and recipe.farbberuhigung > 0:
+    if recipe.preserve_osd:
         try:
-            found = detect_osd(source, recipe.schnittbeginn, duration, info.width, info.height)
+            found = detect_osd(source, recipe.schnittbeginn, duration, info.width, info.height, protect=True)
         except ValueError:
             found = None  # Very short cuts: repair without OSD protection.
         return handmask.merge(found, layers, shape)
@@ -254,18 +279,19 @@ def picture_box(source: Path, start: float, duration: float,
     as bars only when it stays dark in every sampled frame and adds up to at
     least 5 % of the frame; otherwise the whole frame is returned.
     """
-    capture = cv2.VideoCapture(str(source))
+    from .media import decode_frames
+
     brightest = None
-    try:
-        for index in range(BAR_SAMPLES):
-            capture.set(cv2.CAP_PROP_POS_MSEC, (start + duration * (index + 0.5) / BAR_SAMPLES) * 1000)
-            okay, frame = capture.read()
-            if not okay or frame.shape[:2] != (height, width):
-                continue
-            luma = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            brightest = luma if brightest is None else np.maximum(brightest, luma)
-    finally:
-        capture.release()
+    for index in range(BAR_SAMPLES):
+        seconds = start + duration * (index + 0.5) / BAR_SAMPLES
+        try:
+            frames = decode_frames(source, seconds, width, height)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if not frames:
+            continue
+        luma = cv2.cvtColor(frames[0], cv2.COLOR_BGR2GRAY)
+        brightest = luma if brightest is None else np.maximum(brightest, luma)
     if brightest is None:
         return 0, 0, width, height
 
@@ -378,7 +404,7 @@ class PreviewWindow:
         overlay = self.osd if osd is None else osd
         plain = next(islice(_stages(self.pictures, recipe, fingerprint, overlay, look=False), self.middle, None))
         finished = look_frame(plain, Look.of(recipe), round(self.start * self.info.fps) + self.middle)
-        return encoder_detail(plain, recipe), encoder_detail(finished, recipe)
+        return plain, protect_overlay(self.pictures[self.middle], finished, overlay[0]) if recipe.preserve_osd and not recipe.osd_entfernen and overlay is not None else finished
 
     def placed(self, picture: np.ndarray, recipe: Arbeitsrezept) -> np.ndarray:
         """The picture back in a full frame with black bars, at the output size."""
@@ -502,13 +528,12 @@ def process_temporal(source: Path, target: Path, recipe: Arbeitsrezept, info: Vi
     analog = recipe.signalart == "analog" and recipe.farbberuhigung > 0
     osd = clip_mask(source, recipe, info, duration)
     # Fusion applies detail and size itself; FFmpeg must not do it again.
-    filters = video_filters(recipe, restored=fingerprint is not None or analog, upscaled=_fused(recipe))
+    filters = video_filters(recipe, restored=fingerprint is not None or analog, upscaled=True)
     options = encoding_options(recipe, info, duration)
     fps = info.fps
     if not fps:
-        capture = cv2.VideoCapture(str(source))
-        fps = capture.get(cv2.CAP_PROP_FPS) if capture.isOpened() else 0.0
-        capture.release()
+        from .media import video_sampling_info
+        _, _, fps, _ = video_sampling_info(source)
     if fps <= 0 or fps > 240:
         raise ValueError("Could not read video frame rate")
     box = picture_box(source, recipe.schnittbeginn, duration, info.width, info.height)
@@ -563,7 +588,7 @@ def process_temporal(source: Path, target: Path, recipe: Arbeitsrezept, info: Vi
             return Laufergebnis(source, target, False, "Canceled")
         if message:
             return Laufergebnis(source, target, False, message)
-        pending.replace(target)
+        publish_output(pending, target)
         progress(1.0)
         return Laufergebnis(source, target, True, "Done")
     finally:
