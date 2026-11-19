@@ -24,7 +24,12 @@ Compare original and restored footage using the interactive slider, fine-tune re
 
 ### Side-by-side video export
 
+Here is a side by side comparison of a video processed with DVR Remaster
 ![Exported video showing original footage alongside restored footage](docs/screenshots/side-by-side-export.png)
+
+And here is a short clip showing the difference.
+
+https://github.com/user-attachments/assets/9a109f3c-fdc6-4848-96ac-1d150abc5cc4
 
 Export the original and restored footage together in a single video, ideal for demonstrating restoration results in reviews and flight videos.
 
