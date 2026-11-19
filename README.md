@@ -16,15 +16,19 @@ As an FPV pilot and YouTuber, I wanted to clean up my analogue DVR footage so it
 
 ## Screenshots
 
-![DVR Remaster main window](assets/screenshots/Application%20Main%20Page.png)
+### Restore, compare and trim
 
-<details><summary>Comparison, trimming and export</summary>
+![DVR Remaster showing live restoration comparison, adjustments and video trimming](docs/screenshots/trim-video.png)
 
-![Original and restored comparison](assets/screenshots/Comparison.png)
-![Trimming a recording](assets/screenshots/Trim%20Video.png)
-![Export settings](assets/screenshots/Export.png)
+Compare original and restored footage using the interactive slider, fine-tune restoration settings and select the sections you want to export.
 
-</details>
+### Side-by-side video export
+
+![Exported video showing original footage alongside restored footage](docs/screenshots/side-by-side-export.png)
+
+Export the original and restored footage together in a single video, ideal for demonstrating restoration results in reviews and flight videos.
+
+See the [illustrated user guide](docs/USER_GUIDE.md) for more screenshots and step-by-step instructions.
 
 ## Features
 

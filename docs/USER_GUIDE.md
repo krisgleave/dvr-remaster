@@ -4,9 +4,17 @@
 
 Open one or more supported recordings (MP4, MOV, MKV, AVI, M4V, TS or WebM). Container support depends on the codecs FFmpeg can decode. Select the recording you want to work on. Use playback, the timeline and frame-step controls to inspect damaged moments and compare the original with the restored preview. Preview rendering may take time after changes.
 
+![DVR Remaster main application window](screenshots/main-application.png)
+
+*The main workspace before importing a recording.*
+
 ## Restoration
 
 Choose Analogue or HDZero/digital to match the recording, then a built-in preset. Start with Balanced and increase strength only where it helps. Repair controls interference treatment; sharpness emphasises edges; saturation changes colour intensity; contrast changes tonal separation. Type a numeric value and press Enter or leave the field to apply it. Values are clamped to the slider limits. Markers show the selected preset's reference values. Individual reset buttons restore one value; Reset all restores the adjustment values.
+
+![Available restoration presets](screenshots/preset-options.png)
+
+*Choose from Light, Balanced, Strong or Extra Strong & Punchy.*
 
 Save a custom preset under a unique name for reuse. Presets and personal settings are stored separately from the app. Use the preset management controls to manage your saved choices.
 
@@ -18,11 +26,23 @@ Enable Preserve OSD to protect detected original text/graphic pixels. The detect
 
 Set the section's start and end using the trim controls. Click Add to queue to capture the section with its current restoration and OSD-protection settings. Change the trim and add another section, or select another recording and repeat. The same recording can appear several times.
 
+![Live comparison and video trimming](screenshots/trim-video.png)
+
+*Drag the comparison slider to inspect restoration results and use the timeline to select a section for export.*
+
 Open Queue to review section durations and settings. The pencil edits that section's restoration settings; Save applies them and Cancel leaves them unchanged. The red trash icon removes only that queue entry. Remove all clears the export queue; neither operation deletes recordings. Sections export to separate files. They are not joined into one movie.
+
+![Export queue with individual restoration settings](screenshots/export-queue.png)
+
+*Each queued section retains its own restoration settings and can be edited or removed individually.*
 
 ## Export
 
 Click Export video and review:
+
+![Export video settings](screenshots/export-screen.png)
+
+*Choose the file type, resolution, video layout, audio settings, filename and destination.*
 
 | Setting | Meaning |
 |---|---|
@@ -36,6 +56,18 @@ Click Export video and review:
 | Remove audio | Checked means silent output; clear it to retain source audio where present. |
 | Filename | Base name; multiple queued outputs receive _1, _2, etc. Existing names get an additional suffix. |
 | Save to | Destination folder chosen with Browse. |
+
+### Output resolution
+
+![Available export resolutions](screenshots/export-options.png)
+
+*Keep the original resolution or upscale to HD, 2K or 4K while preserving the source display aspect ratio.*
+
+### Side-by-side video export
+
+![Example of an exported side-by-side comparison video](screenshots/side-by-side-export.png)
+
+*Choose Side by side under Video layout to export a comparison video with the original footage on the left and the restored footage on the right.*
 
 Export format, size, layout and audio choices apply to the batch. Restoration settings are retained per queued section. Check Remove audio each session: it starts enabled. Size and time estimates are approximate and depend on content and previous processing samples.
 
