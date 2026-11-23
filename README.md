@@ -6,7 +6,7 @@
 
 Developed by **Kris Gleave (KrisTalksTech)** for the FPV community, based on FPV DVR Cleaner by David-Andreas Tornow and contributors.
 
-**v1.0.0 — Free and open-source FPV DVR restoration for Mac.**
+**v1.1 — Free and open-source FPV DVR restoration for Mac.**
 
 [Releases](https://github.com/krisgleave/dvr-remaster/releases) · [User guide](docs/USER_GUIDE.md) · [Installation](docs/INSTALLATION.md) · [Release notes](RELEASE_NOTES.md) · [Support](SUPPORT.md) · [Report an issue](https://github.com/krisgleave/dvr-remaster/issues)
 
@@ -55,8 +55,8 @@ The current interface does not expose the inherited engine's MKV/WebM export, OS
 
 ## Get started
 
-1. Download **DVR-Remaster-1.0.0-Mac.zip** from Releases. **Code → Download ZIP** is source code.
-2. Unzip and move **DVR Remaster.app** into Applications.
+1. Download **DVR-Remaster-1.1-arm64.pkg** for guided installation, or **DVR-Remaster-1.1-Mac.zip** for manual installation, from Releases. **Code → Download ZIP** is source code.
+2. Run the PKG installer, or unzip the ZIP and move **DVR Remaster.app** into Applications.
 3. Open a recording, choose the signal type and start with a balanced preset.
 4. Compare a few frames and adjust repair, sharpness, saturation and contrast.
 5. Trim a section and click **Add to queue**. Repeat for other sections or recordings.

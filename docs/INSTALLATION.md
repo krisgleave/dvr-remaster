@@ -1,37 +1,50 @@
-# Installing DVR Remaster
+# Installing DVR Remaster v1.1
 
-## macOS
+## Requirements
 
-DVR Remaster v1.0.0 targets Apple Silicon Macs. Public download is pending the checks in [release validation](RELEASE_VALIDATION.md).
+- Apple Silicon Mac
+- macOS 14 or newer (minimum build target)
+- No separate Python, .NET or FFmpeg installation required
 
-### Installing the application
+## Option 1: PKG installer
 
-1. Download the ZIP file from [GitHub Releases](https://github.com/krisgleave/dvr-remaster/releases) when available. Choose DVR-Remaster-1.0.0-Mac.zip; Code → Download ZIP contains source.
-2. Extract the ZIP file.
-3. Move DVR Remaster.app into your Applications folder.
-4. Open DVR Remaster from Applications.
+1. Download `DVR-Remaster-1.1-arm64.pkg` from GitHub Releases.
+2. Close DVR Remaster if it is running.
+3. Open the package and follow the installation instructions.
+4. Launch DVR Remaster from Applications.
 
-### macOS security
+The installer places the application in `/Applications`.
 
-macOS may display a security warning when opening an application downloaded from the internet.
+## Option 2: ZIP download
 
-Refer to Apple's official guidance:
+1. Download `DVR-Remaster-1.1-Mac.zip`.
+2. Extract the ZIP.
+3. Move `DVR Remaster.app` into Applications, replacing an older version if required.
+4. Open DVR Remaster.
+
+Do not use GitHub's **Code > Download ZIP** option to download the application. That contains source code.
+
+## macOS security
+
+The application uses ad-hoc code signing and is not Apple-notarised.
+macOS may display a security warning.
+
+Follow Apple's guidance for safely opening a downloaded application:
 https://support.apple.com/en-gb/102445
 
 Do not disable system-wide security protections.
 
 ## Updating
 
-Close DVR Remaster before replacing the existing application with a newer version.
+Close DVR Remaster before installing an update.
 
-## Personal settings
+Your settings and presets are stored separately at:
 
-Your settings and presets are stored separately from the application:
+`~/Library/Application Support/DVR Remaster/`
 
-~/Library/Application Support/DVR Remaster/
+Replacing the application should not remove them.
 
-Replacing the application should not remove your personal settings.
+## Other systems
 
-## Other operating systems
-
-Windows, Linux and Intel Mac compatibility have not yet been verified.
+Intel Macs, Windows and Linux are not supported by this macOS release.
+Testing on the minimum macOS 14 target remains pending.

@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:FpvDvrCleaner.Desktop"
-        x:Class="FpvDvrCleaner.Desktop.MainWindow" Title="DVR Remaster v1.0.0 — by KrisTalksTech"
+        x:Class="FpvDvrCleaner.Desktop.MainWindow" Title="DVR Remaster"
         Icon="avares://FpvDvrCleaner.Desktop/Assets/app.png" Width="1320" Height="880" MinWidth="1180" MinHeight="700"
         Background="#1E1E1E" Focusable="True" WindowStartupLocation="CenterScreen" KeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged">
 

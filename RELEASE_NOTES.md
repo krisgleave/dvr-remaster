@@ -1,52 +1,63 @@
-# DVR Remaster v1.0.0
+# DVR Remaster v1.1
 
-The first release of DVR Remaster, a free and open-source
-FPV DVR restoration application developed by Kris Gleave
-(KrisTalksTech), based on FPV DVR Cleaner.
+DVR Remaster is a free, open-source FPV DVR restoration application developed by Kris Gleave (KrisTalksTech), based on FPV DVR Cleaner.
+
+## What's changed
+
+### Installation and packaging
+- Added a macOS PKG installer for straightforward installation and upgrades.
+- Retained the portable macOS ZIP download.
+- Improved the self-contained application bundle layout, with desktop runtime, processing engine and FFmpeg included.
+- Verified macOS application code signing and ZIP integrity.
+- Updated application version metadata to v1.1.
+
+### Interface and documentation
+- Simplified the application window title to DVR Remaster.
+- Updated the README with current application screenshots.
+- Expanded the illustrated user guide covering export options, queue management and presets.
+- Added clearer documentation and examples for original/restored side-by-side video exports.
+
+### Validation
+- Successfully built for Apple Silicon.
+- Tested the PKG installation and video export.
+- No separate Python, .NET or FFmpeg installation required.
 
 ## Downloads
 
-- DVR-Remaster-1.0.0-Mac.zip — macOS application
-- DVR-Remaster-1.0.0-Third-Party-Source.zip — third-party source and build documentation
-- SHA256SUMS.txt — release file checksums
+- **DVR-Remaster-1.1-arm64.pkg** — recommended macOS installer
+- **DVR-Remaster-1.1-Mac.zip** — manual installation
+- **SHA256SUMS.txt** — download integrity checksums
 
-## Highlights
+## Installation
 
-- Analogue colour restoration and interference repair
-- HDZero and digital restoration
-- Adjustable restoration presets
-- Optional OSD preservation
-- Original and restored video comparison
-- Video trimming and batch export
-- H.264, H.265 and ProRes 422 export
-- Original, HD, 2K and 4K output
-- Fully local processing with no subscription
+Download the PKG installer, close any running copy of DVR Remaster, and follow the installation instructions.
 
-## Requirements
+Alternatively, extract the ZIP and copy DVR Remaster.app into Applications.
+
+Your personal settings and presets are stored separately from the application.
+
+## Compatibility
 
 - Apple Silicon Mac
-- macOS 14.0 or newer (minimum build target)
-- No separate Python, .NET or FFmpeg installation required
+- macOS 14 or newer (minimum build target)
+- Tested on the developer's Mac; validation on macOS 14 itself remains pending
+- Intel Macs, Windows and Linux are not supported by this release
 
-The release has been tested on macOS 27.2.1.
-Testing on macOS 14 itself remains pending.
+## macOS security
 
-The application is not notarised by Apple.
+The application is ad-hoc signed but not notarised by Apple. macOS may display a security warning when opening the downloaded app or installer.
+
+See Apple's official instructions:
+https://support.apple.com/en-gb/102445
 
 ## Licensing
 
-DVR Remaster is licensed under GPL-3.0-or-later.
-The original FPV DVR Cleaner MIT licence and attribution
-are preserved. Third-party components retain their own
-licences.
+DVR Remaster is licensed under GPL-3.0-or-later. Original FPV DVR Cleaner MIT attribution and third-party licences are preserved.
 
-Matching FFmpeg source and build documentation are
-provided in the third-party source download.
+See THIRD-PARTY-NOTICES.md for component licensing information.
 
-## Support
+## Links
 
-https://github.com/krisgleave/dvr-remaster
-
-https://youtube.com/@kristalkstech
-
-https://paypal.me/krisgleave
+- Repository: https://github.com/krisgleave/dvr-remaster
+- YouTube: https://youtube.com/@kristalkstech
+- Support: https://paypal.me/krisgleave
