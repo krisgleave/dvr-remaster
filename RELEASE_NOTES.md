@@ -1,8 +1,6 @@
-# DVR Remaster v1.1
-
 DVR Remaster is a free, open-source FPV DVR restoration application developed by Kris Gleave (KrisTalksTech), based on FPV DVR Cleaner.
 
-## What's changed
+## What's new in v1.1
 
 ### Installation and packaging
 - Added a macOS PKG installer for straightforward installation and upgrades.
