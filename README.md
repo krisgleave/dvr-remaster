@@ -2,6 +2,19 @@
 
 # DVR Remaster
 
+<!-- KRIS-SUPPORT-START -->
+
+> ☕ **Support Free FPV Software Development**
+>
+> All my applications are free and open source. If you find
+> them useful, optional contributions help support continued
+> development and improvements.
+>
+> **[☕ Buy Me a Coffee](https://buymeacoffee.com/krisgleave)**
+
+<!-- KRIS-SUPPORT-END -->
+
+
 **Restore. Enhance. Preserve.**
 
 Developed by **Kris Gleave (KrisTalksTech)** for the FPV community, based on FPV DVR Cleaner by David-Andreas Tornow and contributors.
